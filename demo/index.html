@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttentionOS — The Attention Audit</title>
+<meta name="description" content="A 60-second audit of your actual attention span. No install, no data leaves the page.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Archivo:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: oklch(0.965 0.012 85);
+    --paper-deep: oklch(0.935 0.018 85);
+    --ink: oklch(0.25 0.02 60);
+    --ink-soft: oklch(0.45 0.025 70);
+    --ink-faint: oklch(0.62 0.02 75);
+    --rule: oklch(0.82 0.02 80);
+    --accent: oklch(0.58 0.22 33);
+    --accent-deep: oklch(0.48 0.2 33);
+    --serif: "Instrument Serif", Georgia, serif;
+    --sans: "Archivo", "Helvetica Neue", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: var(--paper); }
+  body {
+    font-family: var(--sans);
+    color: var(--ink);
+    min-height: 100svh;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(1200px 600px at 80% -10%, oklch(0.95 0.025 75 / 0.6), transparent 60%),
+      var(--paper);
+  }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ---------- shared chrome ---------- */
+  .sheet {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem) 4rem;
+  }
+  .masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+  }
+  .masthead .brand {
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+  }
+  .masthead .brand em { font-style: normal; color: var(--accent); }
+  .masthead .doc-no {
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+
+  /* ---------- intro ---------- */
+  .intro-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: clamp(1.5rem, 5vw, 4rem);
+    margin-top: clamp(2rem, 6vw, 4.5rem);
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.6rem, 7vw, 4.6rem);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+  }
+  h1 .underline {
+    font-style: italic;
+    color: var(--accent);
+    text-decoration: underline;
+    text-decoration-thickness: 0.04em;
+    text-underline-offset: 0.12em;
+  }
+  .lede {
+    margin-top: 1.4rem;
+    font-size: 1.02rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    max-width: 46ch;
+  }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  .protocol { font-size: 0.9rem; }
+  .protocol-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--ink);
+  }
+  .protocol ol { list-style: none; counter-reset: step; }
+  .protocol li {
+    counter-increment: step;
+    display: flex;
+    gap: 0.9rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--rule);
+    line-height: 1.5;
+  }
+  .protocol li > span { flex: 1; }
+  .protocol li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 1.25rem;
+    color: var(--accent);
+    min-width: 1.8rem;
+  }
+  .protocol .nogo {
+    font-family: var(--serif);
+    font-size: 1.3em;
+    color: var(--accent);
+    font-style: italic;
+  }
+
+  .start-row {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 2px solid var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 0.95rem 2.4rem;
+    cursor: pointer;
+    transition: background 0.18s cubic-bezier(0.22,1,0.36,1), border-color 0.18s, transform 0.18s;
+  }
+  .btn:hover { background: var(--accent-deep); border-color: var(--accent-deep); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.ghost {
+    background: transparent;
+    color: var(--ink);
+  }
+  .btn.ghost:hover { background: var(--paper-deep); border-color: var(--ink); color: var(--ink); }
+  .fine {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    line-height: 1.5;
+    max-width: 30ch;
+  }
+
+  /* ---------- test ---------- */
+  #test {
+    position: fixed;
+    inset: 0;
+    background: var(--paper);
+    z-index: 10;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: pointer;
+  }
+  #test.active { display: block; }
+  .progress-track {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--rule);
+  }
+  #progressFill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s linear;
+  }
+  .test-hud {
+    position: absolute;
+    top: 1.2rem;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 1.5rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  #stim {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-family: var(--serif);
+    font-size: clamp(9rem, 30vw, 17rem);
+    line-height: 1;
+    color: var(--ink);
+    font-feature-settings: "tnum";
+  }
+  #stim.countdown { color: var(--ink-faint); font-style: italic; font-size: clamp(5rem, 16vw, 8rem); }
+  #stim.err { color: var(--accent); }
+  .test-hint {
+    position: absolute;
+    bottom: 2rem;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ---------- results ---------- */
+  .report-head {
+    margin-top: clamp(2rem, 5vw, 3.5rem);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .verdict-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin-bottom: 0.4rem;
+  }
+  .verdict {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(2.6rem, 7vw, 4.4rem);
+    line-height: 1;
+    color: var(--accent);
+  }
+  .score-block { text-align: right; }
+  .score-num {
+    font-family: var(--serif);
+    font-size: clamp(4.5rem, 12vw, 7.5rem);
+    line-height: 0.9;
+  }
+  .score-denom {
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.08em;
+  }
+
+  .readout {
+    margin-top: clamp(2rem, 5vw, 3rem);
+    border-top: 2px solid var(--ink);
+  }
+  .readout-row {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) auto;
+    align-items: baseline;
+    gap: 1rem;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .readout-row .k { font-size: 0.9rem; color: var(--ink-soft); }
+  .readout-row .k small { display: block; font-size: 0.74rem; color: var(--ink-faint); margin-top: 0.15rem; }
+  .readout-row .v {
+    font-family: var(--serif);
+    font-size: 1.7rem;
+    font-feature-settings: "tnum";
+  }
+  .readout-row .v.bad { color: var(--accent); }
+
+  .commentary {
+    margin-top: 1.8rem;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(1.15rem, 2.6vw, 1.45rem);
+    line-height: 1.45;
+    max-width: 38ch;
+  }
+  .actions {
+    margin-top: 2.4rem;
+    display: flex;
+    gap: 0.9rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .copied-note {
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 0.06em;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .copied-note.show { opacity: 1; }
+  .footer-rule {
+    margin-top: 3.5rem;
+    padding-top: 0.8rem;
+    border-top: 2px solid var(--ink);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .footer-rule a { color: var(--ink-soft); }
+
+  @media (max-width: 700px) {
+    .intro-grid { grid-template-columns: 1fr; }
+    .score-block { text-align: left; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ INTRO ============ -->
+<section id="intro" class="screen active">
+  <div class="sheet">
+    <header class="masthead">
+      <div class="brand">Attention<em>OS</em></div>
+      <div class="doc-no">Audit № 001 · Sustained Attention</div>
+    </header>
+
+    <div class="intro-grid">
+      <div>
+        <h1>How long can you <span class="underline">actually</span> pay attention?</h1>
+        <p class="lede">
+          We benchmark the models. We trace the agents. The one component nobody
+          profiles is <strong>you</strong> — the human the whole loop waits on.
+          This is a 60-second audit of your sustained attention, scored like a
+          lab instrument. <strong>Nothing leaves this page.</strong>
+        </p>
+      </div>
+
+      <aside class="protocol">
+        <div class="protocol-title">Protocol</div>
+        <ol>
+          <li><span>Digits flash, one at a time, for one minute.</span></li>
+          <li><span>Press <strong>space</strong> (or tap) for <em>every</em> digit&hellip;</span></li>
+          <li><span>&hellip;except <span class="nogo">3</span>. When you see a 3, do <strong>nothing</strong>.</span></li>
+          <li><span>It is boring on purpose. Boredom is the test.</span></li>
+        </ol>
+      </aside>
+    </div>
+
+    <div class="start-row">
+      <button class="btn" id="startBtn">Begin the audit</button>
+      <p class="fine">Runs entirely in your browser. No accounts, no analytics, no mercy.</p>
+    </div>
+
+    <div class="footer-rule">
+      <span>AttentionOS · open source</span>
+      <span>SART protocol · 60 s</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TEST ============ -->
+<section id="test" class="screen">
+  <div class="progress-track"><div id="progressFill"></div></div>
+  <div class="test-hud">
+    <span>Audit in progress</span>
+    <span id="trialCounter"></span>
+  </div>
+  <div id="stim"></div>
+  <div class="test-hint">space / tap · skip the 3s</div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section id="results" class="screen">
+  <div class="sheet">
+    <header class="masthead">
+      <div class="brand">Attention<em>OS</em></div>
+      <div class="doc-no">Audit № 001 · Findings</div>
+    </header>
+
+    <div class="report-head">
+      <div>
+        <div class="verdict-label">Verdict</div>
+        <div class="verdict" id="grade">—</div>
+      </div>
+      <div class="score-block">
+        <div class="score-num" id="score">—</div>
+        <div class="score-denom">attention score / 100</div>
+      </div>
+    </div>
+
+    <div class="readout" id="readout"></div>
+
+    <p class="commentary" id="commentary"></p>
+
+    <div class="actions">
+      <button class="btn" id="downloadBtn">Download share card</button>
+      <button class="btn ghost" id="copyBtn">Copy result</button>
+      <button class="btn ghost" id="retryBtn">Run it again</button>
+      <span class="copied-note" id="copiedNote">copied — go start an argument</span>
+    </div>
+
+    <div class="footer-rule">
+      <span>AttentionOS · the attention audit</span>
+      <span>github.com/attentionos</span>
+    </div>
+  </div>
+</section>
+
+<canvas id="cardCanvas" width="1080" height="1350" style="display:none"></canvas>
+
+<script>
+(() => {
+  const qs = new URLSearchParams(location.search);
+  const FAST = qs.has('fast');
+  const N_TRIALS = FAST ? 12 : 50;
+  const N_TARGETS = FAST ? 2 : 6;
+  const STIM_MS = 650, BLANK_MS = 500;
+  const TRIAL_MS = STIM_MS + BLANK_MS;
+
+  const $ = id => document.getElementById(id);
+  const screens = { intro: $('intro'), test: $('test'), results: $('results') };
+  const show = name => {
+    Object.values(screens).forEach(s => s.classList.remove('active'));
+    screens[name].classList.add('active');
+  };
+
+  // ---- sequence: digits 1-9, N_TARGETS threes, never adjacent, none in first 3 ----
+  function makeSequence() {
+    const seq = Array.from({length: N_TRIALS}, () => {
+      let d; do { d = 1 + Math.floor(Math.random() * 9); } while (d === 3);
+      return d;
+    });
+    const slots = [];
+    while (slots.length < N_TARGETS) {
+      const i = 3 + Math.floor(Math.random() * (N_TRIALS - 3));
+      if (slots.every(s => Math.abs(s - i) > 1)) slots.push(i);
+    }
+    slots.forEach(i => seq[i] = 3);
+    return seq;
+  }
+
+  // ---- test state ----
+  let seq = [], trial = -1, trialStart = 0, responded = false;
+  let results = [];          // {digit, rt|null, hit, commission, omission}
+  let tabEscapes = 0, running = false, timers = [];
+
+  const stim = $('stim');
+
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+  const after = (ms, fn) => timers.push(setTimeout(fn, ms));
+
+  function startTest() {
+    seq = makeSequence();
+    trial = -1; results = []; tabEscapes = 0; running = true;
+    show('test');
+    $('progressFill').style.width = '0%';
+    let count = 3;
+    stim.className = 'countdown';
+    const tick = () => {
+      if (count > 0) { stim.textContent = count--; after(800, tick); }
+      else { stim.className = ''; stim.textContent = ''; after(400, nextTrial); }
+    };
+    tick();
+  }
+
+  function nextTrial() {
+    trial++;
+    if (trial >= N_TRIALS) return finish();
+    const digit = seq[trial];
+    responded = false;
+    stim.className = '';
+    stim.textContent = digit;
+    trialStart = performance.now();
+    $('trialCounter').textContent = `${trial + 1} / ${N_TRIALS}`;
+    $('progressFill').style.width = `${((trial + 1) / N_TRIALS) * 100}%`;
+    after(STIM_MS, () => { stim.textContent = ''; });
+    after(TRIAL_MS, () => {
+      if (!responded) {
+        const d = seq[trial];
+        results.push(d === 3
+          ? { digit: d, rt: null, hit: true,  commission: false, omission: false }  // correct withhold
+          : { digit: d, rt: null, hit: false, commission: false, omission: true });
+      }
+      nextTrial();
+    });
+  }
+
+  function respond() {
+    if (!running || trial < 0 || trial >= N_TRIALS || responded) return;
+    responded = true;
+    const rt = performance.now() - trialStart;
+    const d = seq[trial];
+    if (d === 3) {
+      results.push({ digit: d, rt, hit: false, commission: true, omission: false });
+      stim.classList.add('err');
+    } else {
+      results.push({ digit: d, rt, hit: true, commission: false, omission: false });
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && screens.test.classList.contains('active')) {
+      e.preventDefault(); respond();
+    }
+  });
+  $('test').addEventListener('pointerdown', respond);
+  document.addEventListener('visibilitychange', () => {
+    if (running && document.hidden) tabEscapes++;
+  });
+
+  // ---- scoring (METRICS.md §audit) ----
+  function analyze() {
+    const go = results.filter(r => r.digit !== 3);
+    const rts = go.filter(r => r.rt !== null).map(r => r.rt);
+    const lapses = results.filter(r => r.omission).length;
+    const impulses = results.filter(r => r.commission).length;
+    const mean = a => a.reduce((s, x) => s + x, 0) / Math.max(a.length, 1);
+    const m = mean(rts);
+    const sd = Math.sqrt(mean(rts.map(x => (x - m) ** 2)));
+    const cv = rts.length > 3 ? sd / m : 0;
+    const median = a => {
+      const s = [...a].sort((x, y) => x - y);
+      return s.length ? (s[s.length >> 1] + s[(s.length - 1) >> 1]) / 2 : 0;
+    };
+    const half = Math.floor(rts.length / 2);
+    const rt1 = mean(rts.slice(0, half)), rt2 = mean(rts.slice(half));
+    const drift = half > 2 ? (rt2 - rt1) / rt1 : 0;
+
+    const score = Math.max(0, Math.min(100, Math.round(
+      100 - 9 * impulses - 5 * lapses
+          - 120 * Math.max(0, cv - 0.10)
+          - 25 * Math.max(0, drift)
+          - 10 * tabEscapes
+    )));
+    const grade = score >= 90 ? 'Laser-locked'
+                : score >= 75 ? 'Steady'
+                : score >= 60 ? 'Flickering'
+                : score >= 40 ? 'Drifting'
+                : 'Strip-mined';
+    return { score, grade, medianRt: Math.round(median(rts)),
+             stability: Math.round(Math.max(0, 1 - cv) * 100),
+             lapses, impulses, drift: Math.round(drift * 100), tabEscapes };
+  }
+
+  function commentaryFor(a) {
+    if (a.tabEscapes > 0) return `You left the tab ${a.tabEscapes === 1 ? 'once' : a.tabEscapes + ' times'} during a sixty-second attention test. Sit with that.`;
+    if (a.score >= 90) return 'Whatever you are protecting, keep protecting it. This is rare hardware.';
+    if (a.score >= 75) return 'Solid. Your attention holds — it’s your environment that leaks. Audit the interrupts next.';
+    if (a.score >= 60) return 'You started sharp and faded. That fade is the vigilance decrement — and it’s trainable.';
+    if (a.score >= 40) return 'Your reaction time says present; your error pattern says elsewhere. The feed won.';
+    return 'Sixty seconds was too long. The strip-mine runs deep. Time to take the resource back.';
+  }
+
+  // ---- results rendering ----
+  let analysis = null;
+  function finish() {
+    running = false;
+    clearTimers();
+    analysis = analyze();
+    renderResults(analysis);
+    show('results');
+  }
+
+  function renderResults(a) {
+    $('score').textContent = a.score;
+    $('grade').textContent = a.grade;
+    $('commentary').textContent = commentaryFor(a);
+    const rows = [
+      ['Median reaction', 'speed of each response', `${a.medianRt} ms`, false],
+      ['Stability', 'consistency of reaction time', `${a.stability}%`, a.stability < 80],
+      ['Lapses', 'zoned out — missed a digit', a.lapses, a.lapses > 2],
+      ['Impulses', 'autopilot — hit the 3', a.impulses, a.impulses > 1],
+      ['Vigilance drift', 'second-half slowdown', `${a.drift > 0 ? '+' : ''}${a.drift}%`, a.drift > 8],
+      ['Tab escapes', 'left a 60-second test', a.tabEscapes, a.tabEscapes > 0],
+    ];
+    $('readout').innerHTML = rows.map(([k, sub, v, bad]) => `
+      <div class="readout-row">
+        <div class="k">${k}<small>${sub}</small></div>
+        <div class="v${bad ? ' bad' : ''}">${v}</div>
+      </div>`).join('');
+  }
+
+  // ---- share card (canvas, 1080x1350) ----
+  async function drawCard(a) {
+    await document.fonts.load('italic 100px "Instrument Serif"');
+    await document.fonts.load('400 100px "Instrument Serif"');
+    await document.fonts.load('600 40px "Archivo"');
+    const c = $('cardCanvas'), x = c.getContext('2d');
+    const W = c.width, H = c.height;
+    const PAPER = '#f3efe6', INK = '#332e26', SOFT = '#6e6557', ACCENT = '#c23f1d', RULE = '#cfc7b6';
+
+    x.fillStyle = PAPER; x.fillRect(0, 0, W, H);
+    x.strokeStyle = INK; x.lineWidth = 6; x.strokeRect(40, 40, W - 80, H - 80);
+
+    const M = 110;
+    x.fillStyle = INK;
+    x.font = '600 34px Archivo';
+    x.letterSpacing = '6px';
+    x.fillText('ATTENTION', M, 150);
+    const w1 = x.measureText('ATTENTION').width;
+    x.fillStyle = ACCENT; x.fillText('OS', M + w1, 150);
+    x.fillStyle = SOFT; x.font = '500 26px Archivo'; x.letterSpacing = '4px';
+    x.fillText('AUDIT № 001 · SUSTAINED ATTENTION', M, 196);
+    x.letterSpacing = '0px';
+    x.strokeStyle = INK; x.lineWidth = 4;
+    x.beginPath(); x.moveTo(M, 230); x.lineTo(W - M, 230); x.stroke();
+
+    // score
+    x.fillStyle = INK; x.font = '400 330px "Instrument Serif"';
+    x.fillText(String(a.score), M - 10, 560);
+    x.fillStyle = SOFT; x.font = '500 30px Archivo';
+    x.fillText('ATTENTION SCORE / 100', M, 620);
+
+    // verdict
+    x.fillStyle = ACCENT; x.font = 'italic 400 110px "Instrument Serif"';
+    x.fillText(a.grade, M, 770);
+
+    // stats rules
+    const stats = [
+      ['Median reaction', `${a.medianRt} ms`],
+      ['Stability', `${a.stability}%`],
+      ['Lapses / impulses', `${a.lapses} / ${a.impulses}`],
+      ['Vigilance drift', `${a.drift > 0 ? '+' : ''}${a.drift}%`],
+      ['Tab escapes', String(a.tabEscapes)],
+    ];
+    let y = 840;
+    for (const [k, v] of stats) {
+      x.strokeStyle = RULE; x.lineWidth = 2;
+      x.beginPath(); x.moveTo(M, y); x.lineTo(W - M, y); x.stroke();
+      x.fillStyle = SOFT; x.font = '400 32px Archivo';
+      x.fillText(k, M, y + 52);
+      x.fillStyle = INK; x.font = '400 50px "Instrument Serif"';
+      const vw = x.measureText(v).width;
+      x.fillText(v, W - M - vw, y + 54);
+      y += 78;
+    }
+
+    x.strokeStyle = INK; x.lineWidth = 4;
+    x.beginPath(); x.moveTo(M, H - 105); x.lineTo(W - M, H - 105); x.stroke();
+    x.fillStyle = INK; x.font = 'italic 400 40px "Instrument Serif"';
+    x.fillText('How long can you actually pay attention?', M, H - 52);
+    return c;
+  }
+
+  $('downloadBtn').addEventListener('click', async () => {
+    const c = await drawCard(analysis);
+    const a = document.createElement('a');
+    a.download = `attention-audit-${analysis.score}.png`;
+    a.href = c.toDataURL('image/png');
+    a.click();
+  });
+
+  $('copyBtn').addEventListener('click', async () => {
+    const a = analysis;
+    const text = `My attention score: ${a.score}/100 (${a.grade}). ` +
+      `Median reaction ${a.medianRt} ms, ${a.lapses} lapses, ${a.impulses} impulses in 60 s.` +
+      (a.tabEscapes ? ` And yes — I left the tab ${a.tabEscapes}×.` : '') +
+      ` Take the AttentionOS audit.`;
+    try { await navigator.clipboard.writeText(text); } catch {}
+    $('copiedNote').classList.add('show');
+    setTimeout(() => $('copiedNote').classList.remove('show'), 2200);
+  });
+
+  $('startBtn').addEventListener('click', startTest);
+  $('retryBtn').addEventListener('click', startTest);
+
+  // debug hook: jump straight to results with mock data (?debug)
+  if (qs.has('debug')) {
+    window.__mock = (over = {}) => {
+      analysis = Object.assign({ score: 82, grade: 'Steady', medianRt: 396,
+        stability: 87, lapses: 1, impulses: 1, drift: 6, tabEscapes: 0 }, over);
+      renderResults(analysis); show('results');
+    };
+    if (qs.has('mock')) window.__mock();
+  }
+})();
+</script>
+</body>
+</html>
