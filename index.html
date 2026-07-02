@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AttentionOS — 60秒测出你的注意力类型</title>
+<meta name="description" content="开源的人类注意力观测层。60秒测试 · 桌宠 · 本地优先。">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Helvetica Neue", "PingFang SC", "Noto Sans SC", sans-serif;
+    background: #14151a; color: #e8e6e1;
+    min-height: 100svh; display: grid; place-items: center; padding: 2rem 1.2rem;
+  }
+  main { max-width: 34rem; width: 100%; }
+  h1 { font-size: 1.6rem; letter-spacing: 0.02em; }
+  h1 span { color: #ff8c42; }
+  .sub { color: #9a978f; margin-top: 0.6rem; line-height: 1.6; font-size: 0.95rem; }
+  .list { margin-top: 2rem; display: grid; gap: 0.7rem; }
+  a.card {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 1rem;
+    border: 1px solid #2a2d36; padding: 1rem 1.2rem; text-decoration: none;
+    color: #e8e6e1; transition: border-color 0.15s, transform 0.15s;
+  }
+  a.card:hover { border-color: #ff8c42; transform: translateX(4px); }
+  a.card .nm { font-weight: 700; }
+  a.card .ds { color: #9a978f; font-size: 0.8rem; text-align: right; }
+  a.card.hot { border-color: #ff8c42; }
+  a.card.hot .nm::after { content: " ★"; color: #ff8c42; }
+  .foot { margin-top: 2.2rem; font-size: 0.78rem; color: #6e7079; line-height: 1.7; }
+  .foot a { color: #9a978f; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Attention<span>OS</span></h1>
+  <p class="sub">60 秒，测出你的注意力类型 — 基于三大注意力网络（警觉 · 定向 · 执行）的小游戏体检。数据不出浏览器。<br>What's your attention type? A 60-second, 3-stage check-up. Nothing leaves your browser.</p>
+  <div class="list">
+    <a class="card hot" href="demo/gbc.html"><span class="nm">HANDHELD</span><span class="ds">彩色掌机 RPG · 训练师卡</span></a>
+    <a class="card hot" href="demo/terminal.html"><span class="nm">TERMINAL</span><span class="ds">深色终端 · $ attn check-up</span></a>
+    <a class="card" href="demo/pixel.html"><span class="nm">GAMEBOY</span><span class="ds">DMG 四色 · 复古掌机</span></a>
+    <a class="card" href="demo/modern.html"><span class="nm">MODERN</span><span class="ds">现代测评风</span></a>
+    <a class="card" href="demo/index.html"><span class="nm">EDITORIAL</span><span class="ds">纸墨编辑风</span></a>
+  </div>
+  <p class="foot">开源 · 本地优先 · 无埋点 — <a href="https://github.com/zhonghaozhan/AttentionOS">github.com/zhonghaozhan/AttentionOS</a><br>Roadmap: mini（网页测试）→ AttentionOS（桌宠 + 采集器）→ Pro（dashboard + MCP）</p>
+</main>
+</body>
+</html>
