@@ -290,11 +290,10 @@
   .fixation { font-size: 2.2rem; color: var(--ink-faint); font-family: var(--serif); }
   .arrows {
     font-size: clamp(2.6rem, 11vw, 4rem);
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     font-weight: 400;
     font-feature-settings: "tnum";
   }
-  .arrows .c { color: var(--accent); }
   .lr-buttons {
     position: absolute;
     bottom: 0; left: 0; right: 0;
@@ -595,7 +594,7 @@
       stageEn: ['Alerting', 'Orienting', 'Executive'],
       stageIntro: [
         ['第 1 关 · 警觉网络', '圆圈亮起的瞬间，拍下去', '别抢跑——抢跑有罚时'],
-        ['第 2 关 · 定向网络', '找到那个混进来的 L', '其他都是旋转的 T，点中 L'],
+        ['第 2 关 · 定向网络', '找到那个混进来的 L', '所有字母都被随机旋转：干扰是 T，目标 L 也转了方向。点中它'],
         ['第 3 关 · 执行网络', '只看中间的箭头', '两边的箭头会骗你。中间朝哪，按哪边'],
       ],
       go: '拍!',
@@ -665,7 +664,7 @@
       stageEn: ['Alerting', 'Orienting', 'Executive'],
       stageIntro: [
         ['Stage 1 · Alerting', 'Tap the instant the circle fires', 'No jumping the gun — false starts cost you'],
-        ['Stage 2 · Orienting', 'Find the L hiding in the crowd', 'Everything else is a rotated T. Tap the L'],
+        ['Stage 2 · Orienting', 'Find the L hiding in the crowd', 'Every letter is randomly rotated — the target L too. Tap it'],
         ['Stage 3 · Executive', 'Only the middle arrow matters', 'The flankers will lie to you. Answer the center'],
       ],
       go: 'TAP!',
@@ -930,7 +929,7 @@
       arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">${f}${f}<span class="c">${c}</span>${f}${f}</div></div>`;
       const t0 = performance.now();
       const ans = await new Promise(res => {
-        const to = setTimeout(() => { cleanup(); res(null); }, 2000);
+        const to = setTimeout(() => { cleanup(); res(null); }, 1600);
         function onKey(e) {
           if (e.key === 'ArrowLeft') done('L');
           else if (e.key === 'ArrowRight') done('R');
@@ -949,7 +948,7 @@
       });
       const rt = performance.now() - t0;
       const correct = ans === dir;
-      data.s3.push({ incong, rt: ans ? rt : 2000, correct });
+      data.s3.push({ incong, rt: ans ? rt : 1600, correct });
       bumpStreak(correct);
       if (!ans) feedback(t('s3miss'), false);
       else if (!correct) feedback(t('s3bad'), false);

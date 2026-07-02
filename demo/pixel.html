@@ -348,9 +348,8 @@
   .arrows {
     font-family: "DotGothic16", "Noto Sans SC", sans-serif;
     font-size: clamp(30px, 11vw, 48px);
-    letter-spacing: 10px;
+    letter-spacing: 0;
   }
-  .arrows .c { background: var(--gb0); color: var(--gb3); padding: 0 6px; }
   .lr-buttons {
     position: absolute;
     bottom: 0; left: 0; right: 0;
@@ -637,7 +636,7 @@
       stageEn: ['ALERT', 'ORIENT', 'EXEC'],
       stageIntro: [
         ['STAGE 1 · 警觉网络', '方靶亮起的瞬间 拍下去', '别抢跑——抢跑有罚时'],
-        ['STAGE 2 · 定向网络', '找到混进来的那个 L', '其他都是旋转的 T 点中 L'],
+        ['STAGE 2 · 定向网络', '找到混进来的那个 L', '所有字母都被随机旋转！干扰是 T，目标是 L——它也转了方向。找到它！'],
         ['STAGE 3 · 执行网络', '只看中间的箭头', '两边的箭头会骗你 中间朝哪按哪边'],
       ],
       go: '拍!',
@@ -707,7 +706,7 @@
       stageEn: ['ALERT', 'ORIENT', 'EXEC'],
       stageIntro: [
         ['STAGE 1 — ALERTING', 'Tap the instant the target fires', 'No jumping the gun. False starts cost you.'],
-        ['STAGE 2 — ORIENTING', 'Find the L hiding in the crowd', 'Everything else is a rotated T. Tap the L.'],
+        ['STAGE 2 — ORIENTING', 'Find the L hiding in the crowd', 'EVERY LETTER IS RANDOMLY ROTATED! Distractors are Ts. The target L is rotated too. FIND IT!'],
         ['STAGE 3 — EXECUTIVE', 'Only the middle arrow matters', 'The flankers will lie. Answer the center.'],
       ],
       go: 'TAP!',
@@ -769,6 +768,44 @@
   };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
+
+  /* ================= 8-bit particles (game juice) ================= */
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const FX_CAP = 30;
+  const fxLayer = document.createElement('div');
+  fxLayer.style.cssText = 'position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:900;';
+  document.body.appendChild(fxLayer);
+  function burst(el) {
+    if (REDUCED || !el) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const n = 10 + Math.floor(Math.random() * 5);           // 10–14 square shards
+    for (let i = 0; i < n; i++) {
+      if (fxLayer.childElementCount >= FX_CAP) break;
+      const size = 4 + Math.floor(Math.random() * 4);       // 4–7px, hard squares
+      const p = document.createElement('div');
+      p.style.cssText = `position:absolute;left:${cx - size / 2}px;top:${cy - size / 2}px;` +
+        `width:${size}px;height:${size}px;background:var(${i % 2 ? '--gb1' : '--gb0'});` +
+        `image-rendering:pixelated;`;
+      fxLayer.appendChild(p);
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 50 + Math.random() * 70;                 // 50–120px travel
+      const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+      const anim = p.animate([
+        { transform: 'translate(0,0)', opacity: 1 },
+        { transform: `translate(${(dx * 0.7).toFixed(1)}px,${(dy * 0.7).toFixed(1)}px)`, opacity: 1 },
+        { transform: `translate(${dx.toFixed(1)}px,${(dy + 26).toFixed(1)}px)`, opacity: 0 }, // slight gravity
+      ], { duration: 300 + Math.random() * 200, easing: 'steps(4, end)' });
+      anim.onfinish = () => p.remove();
+      anim.oncancel = () => p.remove();
+    }
+  }
+  /* 1-frame palette-inverted flash of the feedback window (top-tier hits) */
+  function critFlash() {
+    if (REDUCED) return;
+    fb.style.background = 'var(--gb3)'; fb.style.color = 'var(--gb0)';
+    setTimeout(() => { fb.style.background = ''; fb.style.color = ''; }, 90);
+  }
 
   /* ================= archetype sprites (16x16, GB palette indices) =================
      0 = transparent · 1 = #0f380f · 2 = #306230 · 3 = #8bac0f */
@@ -962,11 +999,13 @@
       const [k, h, p] = t('stageIntro')[idx];
       arena.innerHTML = `<div class="stage-card win">
         <div class="k">${k}</div><h2>${h}</h2><p>${p}</p>
-        <button class="btn" id="stageGo">▶ PRESS A</button></div>`;
-      const onA = e => { if (e.code === 'KeyA') { e.preventDefault(); $('stageGo').click(); } };
-      document.addEventListener('keydown', onA);
+        <button class="btn" id="stageGo">${lang === 'zh' ? '▶ 按 空格' : '▶ PRESS SPACE'}</button></div>`;
+      const onKey = e => {
+        if (e.code === 'Space' && !e.repeat) { e.preventDefault(); $('stageGo').click(); }
+      };
+      document.addEventListener('keydown', onKey);
       $('stageGo').addEventListener('click', () => {
-        document.removeEventListener('keydown', onA);
+        document.removeEventListener('keydown', onKey);   // detach BEFORE the stage attaches its own Space handler
         res();
       }, { once: true });
     });
@@ -1007,7 +1046,7 @@
           t0 = performance.now();
         }
         function onTap(e) {
-          if (e.type === 'keydown' && e.code !== 'Space') return;
+          if (e.type === 'keydown' && (e.code !== 'Space' || e.repeat)) return;
           e.preventDefault();
           if (!fired) {                       // false start
             data.s1false++;
@@ -1033,8 +1072,10 @@
       });
       data.s1.push(rt);
       const good = rt < 450;
+      if (good) burst(ring);
       bumpStreak(good);
       feedback(`<span class="ms">${Math.round(rt)}ms</span> ${gradeOf(t('s1grades'), rt)}`, good);
+      if (rt < t('s1grades')[0][0]) critFlash();   // CRITICAL tier
       hud(0, i + 1, TRIALS);
       await sleep(750);
     }
@@ -1063,7 +1104,7 @@
       const rt = await new Promise(res => {
         arena.querySelectorAll('.search-cell').forEach(cell => {
           cell.addEventListener('pointerdown', () => {
-            if (+cell.dataset.k === target) res(performance.now() - t0);
+            if (+cell.dataset.k === target) { burst(cell); res(performance.now() - t0); }
             else {
               wrongThis++; data.s2wrong++;
               cell.classList.add('wrong');
@@ -1076,6 +1117,7 @@
       const good = rt < 2400 && wrongThis === 0;
       bumpStreak(good);
       feedback(`<span class="ms">${(rt / 1000).toFixed(2)}s</span> ${gradeOf(t('s2grades'), rt)}`, good);
+      if (rt < t('s2grades')[0][0] && wrongThis === 0) critFlash();   // CRITICAL tier
       hud(1, i + 1, TRIALS);
       await sleep(750);
     }
@@ -1105,10 +1147,10 @@
       const f = incong ? (dir === 'L' ? '→' : '←') : c;
       arena.innerHTML = `<div class="flanker-wrap"><div class="fixation">+</div></div>`;
       await sleep(400 + Math.random() * 300);
-      arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">${f}${f}<span class="c">${c}</span>${f}${f}</div></div>`;
+      arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">${f}${f}${c}${f}${f}</div></div>`;
       const t0 = performance.now();
       const ans = await new Promise(res => {
-        const to = setTimeout(() => { cleanup(); res(null); }, 2000);
+        const to = setTimeout(() => { cleanup(); res(null); }, 1600);
         function onKey(e) {
           if (e.key === 'ArrowLeft') done('L');
           else if (e.key === 'ArrowRight') done('R');
@@ -1127,11 +1169,15 @@
       });
       const rt = performance.now() - t0;
       const correct = ans === dir;
-      data.s3.push({ incong, rt: ans ? rt : 2000, correct });
+      data.s3.push({ incong, rt: ans ? rt : 1600, correct });
       bumpStreak(correct);
+      if (correct) burst(arena.querySelector('.arrows'));
       if (!ans) feedback(t('s3miss'), false);
       else if (!correct) feedback(t('s3bad'), false);
-      else feedback(`<span class="ms">${Math.round(rt)}ms</span> ${incong ? t('s3okHard') : t('s3ok')}`, true);
+      else {
+        feedback(`<span class="ms">${Math.round(rt)}ms</span> ${incong ? t('s3okHard') : t('s3ok')}`, true);
+        if (incong) critFlash();   // incongruent-correct = top tier
+      }
       hud(2, i + 1, TRIALS);
       await sleep(700);
     }
@@ -1383,7 +1429,7 @@
           }).join('') + `</div>`;
       } else if (pose === 3) {
         hud(2, 3, 8);
-        arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">→→<span class="c">←</span>→→</div></div>`;
+        arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">→→←→→</div></div>`;
         const lr = document.createElement('div');
         lr.className = 'lr-buttons';
         lr.innerHTML = `<button>←</button><button>→</button>`;

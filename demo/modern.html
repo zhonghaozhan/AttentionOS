@@ -340,6 +340,13 @@
   html[lang="zh"] .stage-card h2 { font-weight: 700; }
   .stage-card p { color: var(--ink-soft); font-size: 0.92rem; line-height: 1.65; }
   .stage-card .btn { margin-top: 1.4rem; }
+  .stage-card .key-hint {
+    margin-top: 0.65rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--ink-faint);
+  }
   .stage-card .btn.stage-go {
     background: var(--nc);
     box-shadow: 0 6px 18px var(--ncbg);
@@ -404,12 +411,11 @@
   .fixation { font-size: 2.2rem; color: var(--ink-faint); font-weight: 600; }
   .arrows {
     font-size: clamp(2.4rem, 10vw, 3.6rem);
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
     font-weight: 800;
-    color: var(--ink-faint);
+    color: var(--ink);
     font-feature-settings: "tnum";
   }
-  .arrows .c { color: var(--purp); }
   .lr-buttons {
     position: absolute;
     bottom: 1rem; left: 1rem; right: 1rem;
@@ -805,9 +811,10 @@
       stageEn: ['Alerting', 'Orienting', 'Executive'],
       stageIntro: [
         ['第 1 关 · 警觉网络', '圆圈亮起的瞬间，拍下去', '别抢跑——抢跑有罚时'],
-        ['第 2 关 · 定向网络', '找到那个混进来的 L', '其他都是旋转的 T，点中 L'],
+        ['第 2 关 · 定向网络', '找到那个混进来的 L', '所有字母都被随机旋转：干扰项是 T，目标是 L——它也被转了方向。点中那个 L'],
         ['第 3 关 · 执行网络', '只看中间的箭头', '两边的箭头会骗你。中间朝哪，按哪边'],
       ],
+      spaceHint: '按 空格 开始',
       go: '拍!',
       waiting: '等信号…',
       falseStart: '抢跑了！沉住气…',
@@ -875,9 +882,10 @@
       stageEn: ['Alerting', 'Orienting', 'Executive'],
       stageIntro: [
         ['Stage 1 · Alerting', 'Tap the instant the circle fires', 'No jumping the gun — false starts cost you'],
-        ['Stage 2 · Orienting', 'Find the L hiding in the crowd', 'Everything else is a rotated T. Tap the L'],
+        ['Stage 2 · Orienting', 'Find the L hiding in the crowd', 'Every letter is randomly rotated. The distractors are Ts; the target is an L — rotated too. Tap the L.'],
         ['Stage 3 · Executive', 'Only the middle arrow matters', 'The flankers will lie to you. Answer the center'],
       ],
+      spaceHint: 'or press SPACE',
       go: 'TAP!',
       waiting: 'wait for it…',
       falseStart: 'Jumped the gun! Steady…',
@@ -1004,14 +1012,83 @@
   function gradeOf(table, rt) {
     for (const [max, label] of table) if (rt < max) return label;
   }
+  /* ---------- game juice: hit particles ---------- */
+  const reducedMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PARTICLE_CAP = 30;
+  let liveParticles = 0;
+  let burstLayer = null;
+  function lighten(hex, f) {
+    const n = parseInt(hex.slice(1), 16);
+    const ch = c => Math.round(c + (255 - c) * f);
+    return `rgb(${ch(n >> 16 & 255)},${ch(n >> 8 & 255)},${ch(n & 255)})`;
+  }
+  function burst(el, colors) {
+    if (reducedMotion || !el || !el.animate) return;
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    if (!burstLayer) {
+      burstLayer = document.createElement('div');
+      burstLayer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:40;overflow:hidden;';
+      document.body.appendChild(burstLayer);
+    }
+    const n = 10 + Math.floor(Math.random() * 5);   // 10-14 dots
+    for (let i = 0; i < n; i++) {
+      if (liveParticles >= PARTICLE_CAP) break;
+      liveParticles++;
+      const size = 6 + Math.random() * 2;
+      const dot = document.createElement('div');
+      dot.style.cssText = `position:absolute;left:${cx - size / 2}px;top:${cy - size / 2}px;` +
+        `width:${size}px;height:${size}px;border-radius:50%;` +
+        `background:${colors[i % colors.length]};will-change:transform,opacity;`;
+      burstLayer.appendChild(dot);
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 60 + Math.random() * 80;
+      const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+      const drop = 14 + Math.random() * 18;          // slight gravity
+      const anim = dot.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx * 0.7}px,${dy * 0.7}px) scale(0.7)`, opacity: 0.9, offset: 0.6 },
+        { transform: `translate(${dx}px,${dy + drop}px) scale(0)`, opacity: 0 },
+      ], { duration: 350 + Math.random() * 200, easing: 'cubic-bezier(0.22,1,0.36,1)' });
+      const gone = () => { dot.remove(); liveParticles--; };
+      anim.onfinish = gone;
+      anim.oncancel = gone;
+    }
+  }
+  function stageBurst(el, stageIdx) {
+    const c = NET_COLORS[stageIdx];
+    burst(el, [c, lighten(c, 0.3), lighten(c, 0.55)]);
+  }
+  function pagePulse() {
+    if (reducedMotion) return;
+    const g = $('game');
+    if (!g.animate) return;
+    g.animate([
+      { transform: 'scale(1)' },
+      { transform: 'scale(1.008)' },
+      { transform: 'scale(1)' },
+    ], { duration: 120, easing: 'ease-out' });
+  }
+
   function stageCard(idx) {
     return new Promise(res => {
       const [k, h, p] = t('stageIntro')[idx];
       arena.innerHTML = `<div class="stage-card" style="--nc:${NET_COLORS[idx]};--ncbg:${NET_COLORS[idx]}1F">
         <span class="stage-ic">${ICONS[idx]}</span>
         <div class="k">${k}</div><h2>${h}</h2><p>${p}</p>
-        <button class="btn stage-go" id="stageGo">GO</button></div>`;
-      $('stageGo').addEventListener('click', () => res(), { once: true });
+        <button class="btn stage-go" id="stageGo">GO</button>
+        <div class="key-hint">${t('spaceHint')}</div></div>`;
+      const done = () => {
+        document.removeEventListener('keydown', onKey);   // detach BEFORE the stage attaches its own Space listener
+        res();
+      };
+      function onKey(e) {
+        if (e.code !== 'Space' || e.repeat) return;
+        e.preventDefault();
+        done();
+      }
+      $('stageGo').addEventListener('click', done, { once: true });
+      document.addEventListener('keydown', onKey);
     });
   }
   async function stamp(idx, score) {
@@ -1050,7 +1127,7 @@
           t0 = performance.now();
         }
         function onTap(e) {
-          if (e.type === 'keydown' && e.code !== 'Space') return;
+          if (e.type === 'keydown' && (e.code !== 'Space' || e.repeat)) return;
           e.preventDefault();
           if (!fired) {                       // false start
             data.s1false++;
@@ -1076,6 +1153,10 @@
       });
       data.s1.push(rt);
       const good = rt < 450;
+      if (good) {
+        stageBurst(ring, 0);
+        if (rt < 250) pagePulse();   // top grade
+      }
       bumpStreak(good);
       feedback(`<span class="ms">${Math.round(rt)} ms</span> · ${gradeOf(t('s1grades'), rt)}`, good);
       hud(0, i + 1, TRIALS);
@@ -1106,8 +1187,10 @@
       const rt = await new Promise(res => {
         arena.querySelectorAll('.search-cell').forEach(cell => {
           cell.addEventListener('pointerdown', () => {
-            if (+cell.dataset.k === target) res(performance.now() - t0);
-            else {
+            if (+cell.dataset.k === target) {
+              stageBurst(cell, 1);
+              res(performance.now() - t0);
+            } else {
               wrongThis++; data.s2wrong++;
               cell.classList.add('wrong');
               buzz(30);
@@ -1117,6 +1200,7 @@
       });
       data.s2.push(rt + wrongThis * 300);   // wrong taps cost
       const good = rt < 2400 && wrongThis === 0;
+      if (rt < 1000 && wrongThis === 0) pagePulse();   // top grade
       bumpStreak(good);
       feedback(`<span class="ms">${(rt / 1000).toFixed(2)} s</span> · ${gradeOf(t('s2grades'), rt)}`, good);
       hud(1, i + 1, TRIALS);
@@ -1148,10 +1232,10 @@
       const f = incong ? (dir === 'L' ? '→' : '←') : c;
       arena.innerHTML = `<div class="flanker-wrap"><div class="fixation">+</div></div>`;
       await sleep(400 + Math.random() * 300);
-      arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">${f}${f}<span class="c">${c}</span>${f}${f}</div></div>`;
+      arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">${f}${f}${c}${f}${f}</div></div>`;
       const t0 = performance.now();
       const ans = await new Promise(res => {
-        const to = setTimeout(() => { cleanup(); res(null); }, 2000);
+        const to = setTimeout(() => { cleanup(); res(null); }, 1600);
         function onKey(e) {
           if (e.key === 'ArrowLeft') done('L');
           else if (e.key === 'ArrowRight') done('R');
@@ -1170,7 +1254,11 @@
       });
       const rt = performance.now() - t0;
       const correct = ans === dir;
-      data.s3.push({ incong, rt: ans ? rt : 2000, correct });
+      data.s3.push({ incong, rt: ans ? rt : 1600, correct });
+      if (correct) {
+        stageBurst(arena.querySelector('.arrows'), 2);
+        if (incong) pagePulse();   // held the line against the flankers
+      }
       bumpStreak(correct);
       if (!ans) feedback(t('s3miss'), false);
       else if (!correct) feedback(t('s3bad'), false);
@@ -1468,7 +1556,7 @@
           }).join('') + `</div>`;
       } else if (pose === 3) {
         hud(2, 3, 8);
-        arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">→→<span class="c">←</span>→→</div></div>`;
+        arena.innerHTML = `<div class="flanker-wrap"><div class="arrows">→→←→→</div></div>`;
         const lr = document.createElement('div');
         lr.className = 'lr-buttons';
         lr.innerHTML = `<button>←</button><button>→</button>`;
