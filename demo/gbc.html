@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ATTENTION-OS — 60秒注意力体检 · PIXEL</title>
+<title>ATTENTION-OS — 60秒注意力体检 · HANDHELD</title>
 <meta name="description" content="基于神经科学三大注意力网络的60秒测试。3关小游戏，实时判定，生成你的注意力角色卡。数据不出浏览器。">
 <meta property="og:title" content="60秒，测出你的注意力属性">
 <meta property="og:description" content="警觉 · 定向 · 执行 —— 3关小游戏，通关生成你的注意力角色卡。数据不出浏览器。">
@@ -12,10 +12,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --gb0: #0f380f; /* darkest */
-    --gb1: #306230;
-    --gb2: #8bac0f;
-    --gb3: #9bbc0f; /* lightest */
+    --paper: #f8f8f0;   /* warm paper-white page */
+    --ink: #302848;     /* dark navy — all text & borders */
+    --white: #ffffff;   /* dialogue windows */
+    --red: #e04838;     /* banner / danger */
+    --blue: #3870c0;
+    --gold: #f8b830;
+    --hp-g: #48d068;
+    --hp-y: #f8d030;
+    --hp-r: #e04838;
+    --panel: #e8e8e0;   /* light gray panel */
+    --muted: #706890;
+    --shadow: #d0d0c8;  /* hard offset shadow */
     --fs-xs: 8px;
     --fs-s: 9px;
     --fs-m: 10px;
@@ -34,31 +42,16 @@
     html[lang="zh"] { --fs-xs: 11px; --fs-s: 13px; --fs-m: 14px; --fs-l: 20px; --fs-xl: 26px; }
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { background: var(--gb3); }
+  html { background: var(--paper); }
   body {
     font-family: "Press Start 2P", "DotGothic16", "Noto Sans SC", sans-serif;
     font-size: var(--fs-m);
     line-height: 1.8;
-    color: var(--gb0);
+    color: var(--ink);
     min-height: 100svh;
-    background: var(--gb3);
+    background: var(--paper);
     overscroll-behavior: none;
     -webkit-font-smoothing: none;
-  }
-  /* CRT scanlines — the one sanctioned gradient */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 999;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(15, 56, 15, 0.04) 0px,
-      rgba(15, 56, 15, 0.04) 2px,
-      transparent 2px,
-      transparent 4px
-    );
   }
   canvas { image-rendering: pixelated; }
   .screen { display: none; }
@@ -71,49 +64,61 @@
   }
   @media (min-width: 900px) { .sheet { padding-top: 36px; } }
 
-  /* ---- pixel window: notched 4px border via box-shadow, hard offset shadow ---- */
+  /* ---- classic dialogue window: white, chunky double border with 4px pixel
+     notched corners (4px ink outer via offset shadows + 2px gap + 2px inner
+     ink line via inset shadows), hard offset drop shadow ---- */
   .win {
     position: relative;
-    background: var(--gb3);
-    margin: 6px 12px 14px 6px;
+    background: var(--white);
+    margin: 6px 14px 16px 6px;
     box-shadow:
-      0 -4px 0 0 var(--gb0),
-      0 4px 0 0 var(--gb0),
-      -4px 0 0 0 var(--gb0),
-      4px 0 0 0 var(--gb0),
-      8px 8px 0 0 var(--gb1);
+      0 -4px 0 0 var(--ink),
+      0 4px 0 0 var(--ink),
+      -4px 0 0 0 var(--ink),
+      4px 0 0 0 var(--ink),
+      8px 8px 0 0 var(--shadow),
+      inset 0 0 0 2px var(--white),
+      inset 0 0 0 4px var(--ink);
   }
-  .win.inv { background: var(--gb0); color: var(--gb3); }
+  .win .banner {
+    background: var(--red);
+    color: var(--white);
+    margin: 6px 6px 0;
+    padding: 8px 12px;
+    font-size: var(--fs-s);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
 
   .masthead {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--ink);
+    color: var(--white);
     padding: 10px 12px;
-    box-shadow: 4px 4px 0 0 var(--gb1);
+    box-shadow: 4px 4px 0 0 var(--shadow);
     margin-bottom: 22px;
   }
   .masthead .brand { font-size: var(--fs-m); letter-spacing: 1px; text-transform: uppercase; }
   .lang-toggle {
     font-family: inherit;
     font-size: var(--fs-xs);
-    background: var(--gb3);
-    color: var(--gb0);
+    background: var(--gold);
+    color: var(--ink);
     border: none;
     padding: 6px 10px;
     cursor: pointer;
     text-transform: uppercase;
   }
-  .lang-toggle:active { background: var(--gb2); }
+  .lang-toggle:active { background: var(--white); }
 
   /* ---------- intro ---------- */
   .hero { padding: 16px 14px 18px; }
   .hero-kicker {
     display: inline-block;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--red);
+    color: var(--white);
     font-size: var(--fs-xs);
     padding: 3px 8px;
     text-transform: uppercase;
@@ -126,30 +131,30 @@
     text-transform: uppercase;
     font-weight: 400;
   }
-  h1 .accent { background: var(--gb0); color: var(--gb3); padding: 0 5px; }
-  .lede { margin-top: 12px; font-size: var(--fs-s); line-height: 2; color: var(--gb1); }
-  .lede strong { color: var(--gb0); font-weight: 400; }
+  h1 .accent { background: var(--red); color: var(--white); padding: 0 5px; }
+  .lede { margin-top: 12px; font-size: var(--fs-s); line-height: 2; color: var(--muted); }
+  .lede strong { color: var(--ink); font-weight: 400; }
 
-  .stages-preview { padding: 6px 14px; }
+  .stages-preview { padding: 10px 14px 6px; }
   .stage-line {
     display: flex;
     align-items: baseline;
     gap: 10px;
     padding: 10px 0;
-    border-bottom: 2px solid var(--gb2);
+    border-bottom: 2px solid var(--panel);
     font-size: var(--fs-s);
   }
   .stage-line:last-child { border-bottom: none; }
   .stage-line .no {
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--blue);
+    color: var(--white);
     font-size: var(--fs-xs);
     padding: 2px 6px;
     flex: none;
   }
   .stage-line .nm { min-width: 8em; text-transform: uppercase; }
-  .stage-line .nm small { color: var(--gb1); font-size: var(--fs-xs); margin-left: 4px; }
-  .stage-line .ds { color: var(--gb1); font-size: var(--fs-xs); flex: 1; }
+  .stage-line .nm small { color: var(--muted); font-size: var(--fs-xs); margin-left: 4px; }
+  .stage-line .ds { color: var(--muted); font-size: var(--fs-xs); flex: 1; }
 
   .start-row {
     margin-top: 24px;
@@ -163,46 +168,47 @@
     font-size: var(--fs-m);
     text-transform: uppercase;
     letter-spacing: 1px;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--ink);
+    color: var(--white);
     border: none;
     padding: 15px 22px;
     cursor: pointer;
-    box-shadow: 4px 4px 0 0 var(--gb1);
+    box-shadow: 4px 4px 0 0 var(--shadow);
     touch-action: manipulation;
   }
   .btn:active { transform: translate(4px, 4px); box-shadow: none; }
   .btn.ghost {
-    background: var(--gb3);
-    color: var(--gb0);
-    box-shadow: inset 0 0 0 4px var(--gb0), 4px 4px 0 0 var(--gb1);
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 4px var(--ink), 4px 4px 0 0 var(--shadow);
   }
-  .btn.ghost:active { box-shadow: inset 0 0 0 4px var(--gb0); }
+  .btn.ghost:active { box-shadow: inset 0 0 0 4px var(--ink); }
+  .btn.start { background: var(--red); }
   .btn.start::before {
     content: "▶ ";
     animation: blink 1s steps(1, end) infinite;
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-  .fine { font-size: var(--fs-xs); color: var(--gb1); line-height: 2; max-width: 30ch; }
+  .fine { font-size: var(--fs-xs); color: var(--muted); line-height: 2; max-width: 30ch; }
 
   .footer-rule {
     margin-top: 44px;
     padding-top: 12px;
-    border-top: 4px solid var(--gb0);
+    border-top: 4px solid var(--ink);
     display: flex;
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
     font-size: var(--fs-xs);
     text-transform: uppercase;
-    color: var(--gb1);
+    color: var(--muted);
   }
 
   /* ---------- game ---------- */
   #game {
     position: fixed;
     inset: 0;
-    background: var(--gb3);
+    background: var(--paper);
     z-index: 10;
     touch-action: manipulation;
     user-select: none;
@@ -213,8 +219,8 @@
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 44px;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--ink);
+    color: var(--white);
     padding: 0 14px;
     display: flex;
     justify-content: space-between;
@@ -224,10 +230,12 @@
     letter-spacing: 1px;
   }
   .dots { display: flex; gap: 6px; }
-  .dot { width: 10px; height: 10px; border: 2px solid var(--gb2); }
-  .dot.done { background: var(--gb3); border-color: var(--gb3); }
+  .dot { width: 10px; height: 10px; border: 2px solid var(--muted); }
+  .dot.done { background: var(--gold); border-color: var(--gold); }
   .streak {
-    color: var(--gb3);
+    background: var(--gold);
+    color: var(--ink);
+    padding: 3px 8px;
     opacity: 0;
     transition: opacity 0.2s steps(2, end);
   }
@@ -245,12 +253,17 @@
     bottom: 30px;
     width: fit-content;
     margin: 0 auto;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--white);
+    color: var(--ink);
     padding: 10px 16px;
     font-size: var(--fs-s);
     text-transform: uppercase;
-    box-shadow: 4px 4px 0 0 var(--gb1);
+    box-shadow:
+      0 -3px 0 0 var(--ink),
+      0 3px 0 0 var(--ink),
+      -3px 0 0 0 var(--ink),
+      3px 0 0 0 var(--ink),
+      5px 5px 0 0 var(--shadow);
     opacity: 0;
     pointer-events: none;
   }
@@ -261,18 +274,22 @@
     80% { opacity: 1; }
     100% { opacity: 0; }
   }
-  .feedback .ms { color: var(--gb2); }
+  .feedback .ms { color: var(--blue); }
 
-  /* stage intro = dialogue window */
+  /* stage intro = bottom-anchored encounter dialogue window */
   .stage-card {
-    max-width: 340px;
-    padding: 18px 18px 20px;
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 14px;
+    width: min(520px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 16px 18px 20px;
     text-align: left;
   }
   .stage-card .k {
     display: inline-block;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--red);
+    color: var(--white);
     font-size: var(--fs-xs);
     padding: 3px 8px;
     text-transform: uppercase;
@@ -282,32 +299,51 @@
     font-size: var(--fs-l);
     font-weight: 400;
     line-height: 1.7;
-    margin: 14px 0 8px;
+    margin: 12px 0 6px;
     text-transform: uppercase;
   }
-  .stage-card p { color: var(--gb1); font-size: var(--fs-s); line-height: 2; }
-  .stage-card .btn { margin-top: 18px; }
+  .stage-card p { color: var(--muted); font-size: var(--fs-s); line-height: 2; }
+  .stage-card .btn { margin-top: 16px; background: var(--red); }
+  .dlg-typed { animation: typein 0.9s steps(24, end); }
+  @keyframes typein {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0 0 0 0); }
+  }
+  .cont-arrow {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    color: var(--red);
+    font-size: var(--fs-m);
+    animation: bob 0.6s steps(2, end) infinite;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(4px); }
+  }
 
   /* stage 1: signal target */
   .signal-ring {
     width: min(56vw, 230px);
     aspect-ratio: 1;
-    background: var(--gb3);
+    background: var(--white);
     box-shadow:
-      0 -4px 0 0 var(--gb0),
-      0 4px 0 0 var(--gb0),
-      -4px 0 0 0 var(--gb0),
-      4px 0 0 0 var(--gb0),
-      8px 8px 0 0 var(--gb1);
+      0 -4px 0 0 var(--ink),
+      0 4px 0 0 var(--ink),
+      -4px 0 0 0 var(--ink),
+      4px 0 0 0 var(--ink),
+      8px 8px 0 0 var(--shadow),
+      inset 0 0 0 2px var(--white),
+      inset 0 0 0 4px var(--ink);
     display: grid;
     place-items: center;
     font-size: var(--fs-m);
-    color: var(--gb1);
+    color: var(--muted);
     text-transform: uppercase;
   }
   .signal-ring.go {
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--red);
+    color: var(--white);
     font-size: calc(var(--fs-xl) + 4px);
     animation: sigpop 0.15s steps(2, end);
   }
@@ -328,56 +364,56 @@
   .search-cell {
     width: clamp(54px, 16vw, 80px);
     aspect-ratio: 1;
-    background: var(--gb3);
-    box-shadow: inset 0 0 0 4px var(--gb0);
+    background: var(--white);
+    box-shadow: inset 0 0 0 3px var(--ink);
     display: grid;
     place-items: center;
     font-size: clamp(18px, 6vw, 26px);
     cursor: pointer;
   }
-  .search-cell:active { background: var(--gb2); }
+  .search-cell:active { background: var(--panel); }
   .search-cell.wrong {
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--red);
+    color: var(--white);
     animation: shake 0.3s steps(4, end);
   }
 
   /* stage 3: flanker */
   .flanker-wrap { text-align: center; }
-  .fixation { font-size: 26px; color: var(--gb1); }
+  .fixation { font-size: 26px; color: var(--muted); }
   .arrows {
     font-family: "DotGothic16", "Noto Sans SC", sans-serif;
     font-size: clamp(30px, 11vw, 48px);
     letter-spacing: 10px;
   }
-  .arrows .c { background: var(--gb0); color: var(--gb3); padding: 0 6px; }
+  .arrows .c { background: var(--red); color: var(--white); padding: 0 6px; }
   .lr-buttons {
     position: absolute;
     bottom: 0; left: 0; right: 0;
     height: 96px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    border-top: 4px solid var(--gb0);
+    border-top: 4px solid var(--ink);
   }
   .lr-buttons button {
     font-family: "DotGothic16", "Noto Sans SC", sans-serif;
     font-size: 34px;
-    background: var(--gb3);
+    background: var(--white);
     border: none;
-    border-right: 4px solid var(--gb0);
+    border-right: 4px solid var(--ink);
     cursor: pointer;
-    color: var(--gb0);
+    color: var(--ink);
     touch-action: manipulation;
   }
   .lr-buttons button:last-child { border-right: none; }
-  .lr-buttons button:active { background: var(--gb0); color: var(--gb3); }
+  .lr-buttons button:active { background: var(--blue); color: var(--white); }
   .lr-hint {
     position: absolute;
     bottom: 104px; left: 12px; right: 12px;
     text-align: center;
     font-size: var(--fs-xs);
     letter-spacing: 1px;
-    color: var(--gb1);
+    color: var(--muted);
     text-transform: uppercase;
   }
 
@@ -387,10 +423,9 @@
     inset: 0;
     display: grid;
     place-items: center;
-    background: var(--gb2);
+    background: var(--panel);
   }
   .stamp {
-    background: var(--gb3);
     padding: 22px 30px 24px;
     text-align: center;
     animation: stampin 0.3s steps(3, end);
@@ -399,74 +434,94 @@
     from { transform: scale(1.4); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
   }
-  .stamp .s-title { font-size: var(--fs-xs); letter-spacing: 1px; text-transform: uppercase; color: var(--gb1); }
+  .stamp .s-title { font-size: var(--fs-xs); letter-spacing: 1px; text-transform: uppercase; color: var(--red); }
   .stamp .s-clear { font-size: var(--fs-l); margin-top: 10px; text-transform: uppercase; }
-  .stamp .s-score { font-size: 32px; line-height: 1.6; margin-top: 8px; }
-  .stamp .s-line { font-size: var(--fs-s); color: var(--gb1); margin-top: 4px; }
+  .stamp .s-score { font-size: 32px; line-height: 1.6; margin-top: 8px; color: var(--blue); }
+  .stamp .s-line { font-size: var(--fs-s); color: var(--muted); margin-top: 4px; }
 
-  /* ---------- results ---------- */
-  .status-win {
+  /* ---------- results: trainer card ---------- */
+  .status-win { padding: 0 0 16px; }
+  .status-body {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 16px 14px;
+    padding: 16px 14px 0;
   }
-  #spriteCanvas { width: clamp(96px, 28vw, 144px); height: auto; flex: none; }
+  .pedestal {
+    flex: none;
+    background: var(--panel);
+    box-shadow: inset 0 0 0 2px var(--ink);
+    padding: 10px;
+    display: grid;
+    place-items: center;
+  }
+  #spriteCanvas { width: clamp(88px, 25vw, 132px); height: auto; }
   .verdict-label {
     display: inline-block;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--blue);
+    color: var(--white);
     font-size: var(--fs-xs);
     padding: 2px 6px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  .verdict { font-size: var(--fs-xl); line-height: 1.5; margin-top: 8px; text-transform: uppercase; }
-  .verdict-tag { margin-top: 8px; font-size: var(--fs-s); line-height: 1.9; color: var(--gb1); }
+  .verdict-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .verdict { font-size: var(--fs-xl); line-height: 1.5; text-transform: uppercase; }
+  .lv {
+    background: var(--gold);
+    color: var(--ink);
+    font-size: var(--fs-xs);
+    padding: 2px 6px;
+  }
+  .verdict-tag { margin-top: 8px; font-size: var(--fs-s); line-height: 1.9; color: var(--muted); }
 
   .bars-win {
     position: relative;
-    background: var(--gb3);
-    margin: 6px 12px 14px 6px;
+    background: var(--white);
+    margin: 6px 14px 16px 6px;
     padding: 14px 14px 12px;
     box-shadow:
-      0 -4px 0 0 var(--gb0),
-      0 4px 0 0 var(--gb0),
-      -4px 0 0 0 var(--gb0),
-      4px 0 0 0 var(--gb0),
-      8px 8px 0 0 var(--gb1);
+      0 -4px 0 0 var(--ink),
+      0 4px 0 0 var(--ink),
+      -4px 0 0 0 var(--ink),
+      4px 0 0 0 var(--ink),
+      8px 8px 0 0 var(--shadow),
+      inset 0 0 0 2px var(--white),
+      inset 0 0 0 4px var(--ink);
   }
   .hp-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
   .hp-label { font-size: var(--fs-xs); width: 7ch; flex: none; text-transform: uppercase; }
   .hp-blocks { display: flex; gap: 3px; flex: 1; }
-  .hp-blocks i { flex: 1; height: 16px; background: var(--gb2); }
-  .hp-blocks i.on { background: var(--gb0); }
+  .hp-blocks i { flex: 1; height: 16px; background: var(--panel); }
+  .hp-blocks i.on.g { background: var(--hp-g); }
+  .hp-blocks i.on.y { background: var(--hp-y); }
+  .hp-blocks i.on.r { background: var(--hp-r); }
   .hp-num { font-size: var(--fs-m); min-width: 3ch; text-align: right; }
 
   .networks { margin: 4px 6px 10px; }
-  .net-row { padding: 12px 2px; border-bottom: 4px solid var(--gb2); }
+  .net-row { padding: 12px 2px; border-bottom: 4px solid var(--panel); }
   .net-row:last-child { border-bottom: none; }
   .net-top { display: flex; justify-content: space-between; align-items: baseline; }
   .net-top .nm { font-size: var(--fs-m); text-transform: uppercase; }
-  .net-top .nm small { color: var(--gb1); font-size: var(--fs-xs); margin-left: 6px; }
-  .net-top .sc { font-size: var(--fs-l); }
-  .net-sub { font-size: var(--fs-xs); color: var(--gb1); margin-top: 6px; }
+  .net-top .nm small { color: var(--muted); font-size: var(--fs-xs); margin-left: 6px; }
+  .net-top .sc { font-size: var(--fs-l); color: var(--blue); }
+  .net-sub { font-size: var(--fs-xs); color: var(--muted); margin-top: 6px; }
   .net-rank {
     display: inline-block;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--gold);
+    color: var(--ink);
     font-size: var(--fs-xs);
     padding: 2px 6px;
     margin-top: 8px;
     text-transform: uppercase;
   }
 
-  .rx { padding: 20px 14px 12px; margin-top: 18px; }
+  .rx { padding: 22px 14px 12px; margin-top: 18px; }
   .rx-label {
     position: absolute;
     top: -12px; left: 12px;
-    background: var(--gb0);
-    color: var(--gb3);
+    background: var(--red);
+    color: var(--white);
     padding: 3px 8px;
     font-size: var(--fs-xs);
     letter-spacing: 1px;
@@ -475,24 +530,24 @@
   .rx ul { list-style: none; }
   .rx li {
     padding: 10px 0;
-    border-bottom: 2px solid var(--gb2);
+    border-bottom: 2px solid var(--panel);
     font-size: var(--fs-s);
     line-height: 2;
     display: flex;
     gap: 8px;
   }
   .rx li:last-child { border-bottom: none; }
-  .rx li::before { content: "►"; flex: none; }
-  .rx li strong { font-weight: 400; background: var(--gb2); padding: 0 3px; }
+  .rx li::before { content: "►"; flex: none; color: var(--red); }
+  .rx li strong { font-weight: 400; background: var(--gold); padding: 0 3px; }
 
   details.science {
     margin-top: 18px;
     font-size: var(--fs-xs);
-    color: var(--gb1);
+    color: var(--muted);
     line-height: 2;
   }
-  details.science summary { cursor: pointer; color: var(--gb0); text-transform: uppercase; }
-  details.science a { color: var(--gb1); }
+  details.science summary { cursor: pointer; color: var(--ink); text-transform: uppercase; }
+  details.science a { color: var(--blue); }
 
   .actions {
     margin-top: 24px;
@@ -501,19 +556,20 @@
     flex-wrap: wrap;
     align-items: center;
   }
+  .actions .btn:first-child { background: var(--red); }
   .copied-note { font-size: var(--fs-xs); text-transform: uppercase; opacity: 0; transition: opacity 0.2s steps(2, end); }
   .copied-note.show { opacity: 1; }
-  .star-ask { margin-top: 20px; font-size: var(--fs-s); color: var(--gb1); line-height: 2; }
-  .star-ask a { color: var(--gb0); }
+  .star-ask { margin-top: 20px; font-size: var(--fs-s); color: var(--muted); line-height: 2; }
+  .star-ask a { color: var(--blue); }
 
   .style-nav {
     text-align: center;
-    padding: 18px 0 26px;
+    padding: 18px 0 6px;
     font-size: var(--fs-xs);
-    color: var(--gb1);
+    color: var(--muted);
     text-transform: uppercase;
   }
-  .style-nav a { color: var(--gb1); }
+  .style-nav a { color: var(--blue); }
 
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
@@ -543,6 +599,9 @@
       <span>ATTENTION-OS · OPEN SOURCE</span>
       <span data-i18n="footProto"></span>
     </div>
+    <div class="style-nav">
+      <a href="index.html">editorial</a> · <a href="modern.html">modern</a> · <a href="pixel.html">gameboy</a> · <a href="terminal.html">terminal</a> · <a href="gbc.html">handheld</a>
+    </div>
   </div>
 </section>
 
@@ -562,15 +621,21 @@
   <div class="sheet">
     <header class="masthead">
       <div class="brand">Attention-OS</div>
-      <span style="font-size:var(--fs-xs);text-transform:uppercase" data-i18n="findings"></span>
+      <span style="font-size:var(--fs-xs);text-transform:uppercase">60S CHECK-UP</span>
     </header>
 
     <div class="status-win win">
-      <canvas id="spriteCanvas" width="144" height="144"></canvas>
-      <div class="status-txt">
-        <div class="verdict-label" data-i18n="yourType"></div>
-        <div class="verdict" id="archetype"></div>
-        <p class="verdict-tag" id="archetypeTag"></p>
+      <div class="banner" data-i18n="findings"></div>
+      <div class="status-body">
+        <div class="pedestal"><canvas id="spriteCanvas" width="144" height="144"></canvas></div>
+        <div class="status-txt">
+          <div class="verdict-label" data-i18n="yourType"></div>
+          <div class="verdict-row">
+            <span class="verdict" id="archetype"></span>
+            <span class="lv">Lv.60s</span>
+          </div>
+          <p class="verdict-tag" id="archetypeTag"></p>
+        </div>
       </div>
     </div>
 
@@ -600,14 +665,13 @@
       <span>ATTENTION-OS · 60S CHECK-UP</span>
       <span>github.com/attentionos</span>
     </div>
+    <div class="style-nav">
+      <a href="index.html">editorial</a> · <a href="modern.html">modern</a> · <a href="pixel.html">gameboy</a> · <a href="terminal.html">terminal</a> · <a href="gbc.html">handheld</a>
+    </div>
   </div>
 </section>
 
 <canvas id="cardCanvas" width="1080" height="1440" style="display:none"></canvas>
-
-<div class="style-nav">
-  <a href="index.html">editorial</a> · <a href="modern.html">modern</a> · <a href="pixel.html">gameboy</a> · <a href="terminal.html">terminal</a> · <a href="gbc.html">handheld</a>
-</div>
 
 <script>
 (() => {
@@ -619,7 +683,7 @@
     zh: {
       kicker: '注意力体检 · 60秒 · 3关',
       title: '60秒 测出你的<span class="accent">注意力属性</span>',
-      lede: '神经科学把注意力拆成三条属性槽：<strong>警觉 / 定向 / 执行</strong>。三个小关卡，每一下都实时判定，通关后生成你的注意力角色卡。<strong>数据不出浏览器。</strong>',
+      lede: '神经科学把注意力拆成三条属性槽：<strong>警觉 / 定向 / 执行</strong>。三个小关卡，每一下都实时判定，通关后收下你的注意力训练师卡。<strong>数据不出浏览器。</strong>',
       stages: [
         ['警觉网络', '信号一亮 立刻出手'],
         ['定向网络', '干扰堆里找到目标'],
@@ -630,15 +694,15 @@
       footProto: 'ANT范式 · 约60秒',
       findings: '体检报告',
       yourType: '你的注意力属性',
-      rxTitle: '任务清单',
+      rxTitle: '道具背包',
       sciSummary: '科学依据：这个测试在测什么？',
       sci: '三关分别对应 Posner & Petersen (1990) 提出的三大注意力网络：警觉（简单反应时）、定向（视觉搜索）、执行控制（Eriksen 侧翼干扰任务的冲突代价）。范式改编自注意力网络测试 ANT (Fan et al., 2002)。评分把你的成绩映射到文献常模的近似百分位——这是趣味版体检，不是临床诊断。',
       stageNames: ['警觉', '定向', '执行'],
       stageEn: ['ALERT', 'ORIENT', 'EXEC'],
       stageIntro: [
-        ['STAGE 1 · 警觉网络', '方靶亮起的瞬间 拍下去', '别抢跑——抢跑有罚时'],
-        ['STAGE 2 · 定向网络', '找到混进来的那个 L', '其他都是旋转的 T 点中 L'],
-        ['STAGE 3 · 执行网络', '只看中间的箭头', '两边的箭头会骗你 中间朝哪按哪边'],
+        ['第1关 · 警觉网络', '野生的 信号 出现了！', '方靶亮起的瞬间拍下去——出手要快！别抢跑，抢跑有罚时。'],
+        ['第2关 · 定向网络', '野生的 L 混进了 T 群！', '其他都是旋转的 T。找到那个 L，点中它！'],
+        ['第3关 · 执行网络', '野生的 干扰 出现了！', '两边的箭头会骗你。只看中间的箭头：它朝哪，就按哪边。'],
       ],
       go: '拍!',
       waiting: '等信号…',
@@ -646,17 +710,17 @@
       tapL: '点中那个 L',
       left: '←', right: '→',
       lrHint: '中间箭头朝哪 按哪边（或按方向键）',
-      s1grades: [[250, '会心一击!'], [320, '漂亮!'], [450, '还行'], [Infinity, '走神…']],
-      s2grades: [[1000, '会心一击!'], [1600, '漂亮!'], [2400, '还行'], [Infinity, '找到了']],
-      s3ok: 'OK', s3okHard: '格挡成功!',
-      s3bad: '被带偏了!', s3miss: '超时…',
+      s1grades: [[250, '效果拔群!'], [320, '会心一击!'], [450, '命中!'], [Infinity, '没打中…']],
+      s2grades: [[1000, '效果拔群!'], [1600, '会心一击!'], [2400, '命中!'], [Infinity, '总算打中了']],
+      s3ok: '命中!', s3okHard: '效果拔群!',
+      s3bad: '被带偏了!', s3miss: '没打中…',
       streakWord: '连击',
       stampLines: [
         ['反应快过一句“稍等”', '出手不慌', '信号还能更快'],
         ['什么都藏不住', '目标锁定', '探照灯还在热身'],
         ['防弹玻璃', '干扰免疫', '两边的箭头赢了几局'],
       ],
-      clear: '过关!',
+      clear: '关卡通过!',
       archetypes: {
         commander: ['指挥官型', '三网全开。你的注意力是集团军作战。'],
         cheetah:   ['猎豹型', '0.2 秒的世界里，你已经出手了。'],
@@ -678,7 +742,7 @@
         strength: (n) => `<strong>你的长板是${n}：</strong>把最难的深度任务，安排在你精力峰值的时段，让长板吃到最好的资源。`,
         universal: '想知道你的注意力一天被切碎多少次？用开源的 <strong>attn</strong> CLI 量化它 → github.com/attentionos',
       },
-      dl: '保存结果卡', copy: '复制战绩', retry: '再来一局',
+      dl: '保存训练师卡', copy: '复制战绩', retry: '再来一局',
       copied: '已复制 发出去等人来比',
       share: (name, s, p) => `我的注意力属性：${name}。警觉 ${s[0]} / 定向 ${s[1]} / 执行 ${s[2]}，超过约 ${p}% 常模。60 秒测一下你的 → attentionos ${'#'}AttentionOS`,
       starAsk: '觉得准? 去 GITHUB 点个 STAR → ',
@@ -689,7 +753,7 @@
     en: {
       kicker: 'ATTENTION CHECK-UP · 60S · 3 STAGES',
       title: 'WHAT\'S YOUR <span class="accent">ATTENTION TYPE</span>?',
-      lede: 'Neuroscience splits attention into three stat bars: <strong>alerting, orienting, executive</strong>. Three micro-stages, every input judged live, ending in your attention character card. <strong>Nothing leaves this page.</strong>',
+      lede: 'Neuroscience splits attention into three stat bars: <strong>alerting, orienting, executive</strong>. Three micro-stages, every input judged live, ending in your attention trainer card. <strong>Nothing leaves this page.</strong>',
       stages: [
         ['Alerting', 'React the instant the signal fires'],
         ['Orienting', 'Find the target in the noise'],
@@ -698,17 +762,17 @@
       start: 'PRESS START',
       privacy: 'Runs entirely in your browser. No accounts, no analytics, no requests.',
       footProto: 'ANT PARADIGM · ~60S',
-      findings: 'Status',
+      findings: 'TRAINER CARD',
       yourType: 'Your attention type',
-      rxTitle: 'Quest log',
+      rxTitle: 'BAG',
       sciSummary: 'The science: what is this measuring?',
       sci: 'The three stages map to the three attentional networks of Posner & Petersen (1990): alerting (simple reaction time), orienting (visual search), and executive control (conflict cost in the Eriksen flanker task). The paradigm is adapted from the Attention Network Test (Fan et al., 2002). Scores are mapped to approximate percentiles of published lab norms — a playful check-up, not a clinical instrument.',
       stageNames: ['Alerting', 'Orienting', 'Executive'],
       stageEn: ['ALERT', 'ORIENT', 'EXEC'],
       stageIntro: [
-        ['STAGE 1 — ALERTING', 'Tap the instant the target fires', 'No jumping the gun. False starts cost you.'],
-        ['STAGE 2 — ORIENTING', 'Find the L hiding in the crowd', 'Everything else is a rotated T. Tap the L.'],
-        ['STAGE 3 — EXECUTIVE', 'Only the middle arrow matters', 'The flankers will lie. Answer the center.'],
+        ['STAGE 1 — ALERTING', 'A wild SIGNAL draws near!', 'Tap the instant the target lights up — be quick. No false starts, they cost you.'],
+        ['STAGE 2 — ORIENTING', 'A wild L is hiding in the crowd!', 'Everything else is a rotated T. Find the L and tap it.'],
+        ['STAGE 3 — EXECUTIVE', 'A wild DISTRACTION appeared!', 'The side arrows will lie. Watch only the CENTER arrow — tap the side it points to.'],
       ],
       go: 'TAP!',
       waiting: 'WAIT…',
@@ -716,17 +780,17 @@
       tapL: 'TAP THE L',
       left: '←', right: '→',
       lrHint: 'CENTER ARROW DIRECTION — TAP A SIDE OR USE ARROW KEYS',
-      s1grades: [[250, 'CRITICAL!'], [320, 'NICE!'], [450, 'OK'], [Infinity, 'MISS…']],
-      s2grades: [[1000, 'CRITICAL!'], [1600, 'NICE!'], [2400, 'OK'], [Infinity, 'FOUND IT']],
-      s3ok: 'OK', s3okHard: 'GUARD!',
-      s3bad: 'WRONG WAY!', s3miss: 'TOO SLOW',
+      s1grades: [[250, 'SUPER EFFECTIVE!'], [320, 'A CRITICAL HIT!'], [450, 'A HIT!'], [Infinity, 'IT MISSED…']],
+      s2grades: [[1000, 'SUPER EFFECTIVE!'], [1600, 'A CRITICAL HIT!'], [2400, 'A HIT!'], [Infinity, 'FOUND IT AT LAST']],
+      s3ok: 'A HIT!', s3okHard: 'SUPER EFFECTIVE!',
+      s3bad: 'GOT FOOLED!', s3miss: 'IT MISSED…',
       streakWord: 'COMBO',
       stampLines: [
         ['Faster than a "hold on"', 'Quick on the draw', 'The signal can be faster'],
         ['Nothing stays hidden', 'Target locked', 'Searchlight warming up'],
         ['Bulletproof', 'Distraction-immune', 'The flankers won a few'],
       ],
-      clear: 'STAGE CLEAR',
+      clear: 'STAGE CLEAR!',
       archetypes: {
         commander: ['The Commander', 'All three networks firing. Your attention fights as an army.'],
         cheetah:   ['The Cheetah', 'In a 200-millisecond world, you\'ve already moved.'],
@@ -770,8 +834,8 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
 
-  /* ================= archetype sprites (16x16, GB palette indices) =================
-     0 = transparent · 1 = #0f380f · 2 = #306230 · 3 = #8bac0f */
+  /* ================= archetype sprites (16x16, palette indices) =================
+     0 = transparent · 1 = outline (navy, shared) · 2 = secondary accent · 3 = primary body */
   const SPRITES = {
     cheetah: [ // cat face: ears, spots, whisker-nose
       '0110000000000110',
@@ -882,27 +946,36 @@
       '0110011001100110',
     ],
   };
-  const GBHEX = ['', '#0f380f', '#306230', '#8bac0f'];
-  function drawSprite(ctx, grid, scale, ox = 0, oy = 0) {
+  /* per-archetype 3-color palettes: [_, outline, secondary accent, primary body] */
+  const INK = '#302848';
+  const PAL = {
+    cheetah:   ['', INK, '#e04838', '#f8b830'], // gold body, red spots
+    hawkeye:   ['', INK, '#f8f8f0', '#3870c0'], // blue body, pale beak
+    fortress:  ['', INK, '#e04838', '#a8a8a0'], // gray stone, red banner course + gate
+    commander: ['', INK, '#f8b830', '#e04838'], // red helm, gold trim
+    balanced:  ['', INK, '#f8f8f0', '#48d068'], // green slime, pale shine
+    wanderer:  ['', INK, '#f8f8f0', '#9068d8'], // purple ghost, pale glints
+  };
+  function drawSprite(ctx, grid, scale, ox = 0, oy = 0, pal = PAL.balanced) {
     grid.forEach((row, y) => {
       for (let x = 0; x < 16; x++) {
         const v = row[x];
         if (v === '0') continue;
-        ctx.fillStyle = GBHEX[+v];
+        ctx.fillStyle = pal[+v];
         ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
       }
     });
   }
-  function paintSprite(cv, grid, scale) {
+  function paintSprite(cv, grid, scale, pal) {
     cv.width = cv.height = 16 * scale;
     const g = cv.getContext('2d');
     g.clearRect(0, 0, cv.width, cv.height);
-    drawSprite(g, grid, scale);
+    drawSprite(g, grid, scale, 0, 0, pal);
   }
 
   function applyLang() {
     document.documentElement.lang = lang;
-    document.title = lang === 'zh' ? 'ATTENTION-OS — 60秒注意力体检 · PIXEL' : 'ATTENTION-OS — 60S ATTENTION CHECK-UP · PIXEL';
+    document.title = lang === 'zh' ? 'ATTENTION-OS — 60秒注意力体检 · HANDHELD' : 'ATTENTION-OS — 60S ATTENTION CHECK-UP · HANDHELD';
     $('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     $('heroTitle').innerHTML = t('title');
@@ -961,8 +1034,10 @@
     return new Promise(res => {
       const [k, h, p] = t('stageIntro')[idx];
       arena.innerHTML = `<div class="stage-card win">
-        <div class="k">${k}</div><h2>${h}</h2><p>${p}</p>
-        <button class="btn" id="stageGo">▶ PRESS A</button></div>`;
+        <div class="k">${k}</div>
+        <div class="dlg-typed"><h2>${h}</h2><p>${p}</p></div>
+        <button class="btn" id="stageGo">▶ PRESS A</button>
+        <span class="cont-arrow">▼</span></div>`;
       const onA = e => { if (e.code === 'KeyA') { e.preventDefault(); $('stageGo').click(); } };
       document.addEventListener('keydown', onA);
       $('stageGo').addEventListener('click', () => {
@@ -1188,16 +1263,21 @@
   }
 
   /* ================= results ================= */
-  /* RPG status window: segmented HP bars replace the old radar chart
+  /* HP color rule: >50 green · >25 yellow · else red */
+  const hpClass = s => s > 50 ? 'g' : s > 25 ? 'y' : 'r';
+  const hpHex = s => s > 50 ? '#48d068' : s > 25 ? '#f8d030' : '#e04838';
+
+  /* HP status window: segmented bars, colored by value
      (name kept so call sites stay identical) */
   function radarSVG(scores, size = 220) {
     const labels = STR[lang].stageEn;
     return `<div class="bars-win">` + scores.map((s, i) => {
       const filled = Math.round(s / 5);
+      const cls = hpClass(s);
       return `<div class="hp-row">
         <span class="hp-label">${labels[i]}</span>
         <span class="hp-blocks">${Array.from({ length: 20 },
-          (_, k) => `<i${k < filled ? ' class="on"' : ''}></i>`).join('')}</span>
+          (_, k) => `<i${k < filled ? ` class="on ${cls}"` : ''}></i>`).join('')}</span>
         <span class="hp-num">${s}</span>
       </div>`;
     }).join('') + `</div>`;
@@ -1207,7 +1287,7 @@
     const [aName, aTag] = t('archetypes')[an.type];
     $('archetype').textContent = aName;
     $('archetypeTag').textContent = aTag;
-    paintSprite($('spriteCanvas'), SPRITES[an.type], 9);
+    paintSprite($('spriteCanvas'), SPRITES[an.type], 9, PAL[an.type]);
     const subs = t('netSub');
     const subVals = [subs[0](an.s1rt), subs[1](an.s2rt), subs[2](an.s3cost, an.s3acc)];
     $('networks').innerHTML = an.scores.map((s, i) => `
@@ -1240,52 +1320,81 @@
     $('starAsk').innerHTML = t('starAsk') + `<a href="https://${REPO}" target="_blank" rel="noopener">${REPO}</a>`;
   }
 
-  /* ================= share card ================= */
+  /* ================= share card: collectible trainer card ================= */
   async function drawCard(an) {
     await document.fonts.load('20px "Press Start 2P"').catch(() => {});
     await document.fonts.load('20px "DotGothic16"').catch(() => {});
     if (lang === 'zh') await document.fonts.load('700 20px "Noto Sans SC"').catch(() => {});
     const c = $('cardCanvas'), x = c.getContext('2d');
     const W = c.width, H = c.height;
-    const GB0 = '#0f380f', GB1 = '#306230', GB2 = '#8bac0f', GB3 = '#9bbc0f';
+    const PAPER = '#f8f8f0', WHITE = '#ffffff', RED = '#e04838',
+          GOLD = '#f8b830', PANEL = '#e8e8e0', MUTED = '#706890';
     const LATIN = s => `${s}px "Press Start 2P"`;
     const PX = s => lang === 'zh' ? `${s}px "DotGothic16","Noto Sans SC","Press Start 2P"` : LATIN(s);
 
-    x.fillStyle = GB3; x.fillRect(0, 0, W, H);
-    // nested pixel frame
-    x.fillStyle = GB0; x.fillRect(20, 20, W - 40, H - 40);
-    x.fillStyle = GB3; x.fillRect(44, 44, W - 88, H - 88);
-    x.fillStyle = GB1; x.fillRect(56, 56, W - 112, H - 112);
-    x.fillStyle = GB3; x.fillRect(64, 64, W - 128, H - 128);
+    x.fillStyle = PAPER; x.fillRect(0, 0, W, H);
+    // white card with double navy frame
+    x.fillStyle = INK; x.fillRect(24, 24, W - 48, H - 48);
+    x.fillStyle = WHITE; x.fillRect(36, 36, W - 72, H - 72);
+    x.fillStyle = INK; x.fillRect(48, 48, W - 96, H - 96);
+    x.fillStyle = WHITE; x.fillRect(52, 52, W - 104, H - 104);
 
     x.textAlign = 'center';
     // header
-    x.fillStyle = GB0; x.font = LATIN(40);
-    x.fillText('ATTENTION-OS', W / 2, 160);
-    x.fillStyle = GB1; x.font = PX(lang === 'zh' ? 34 : 24);
-    x.fillText(t('cardKicker'), W / 2, 216);
-    x.fillStyle = GB0; x.fillRect(120, 252, W - 240, 8);
+    x.fillStyle = INK; x.font = LATIN(34);
+    x.fillText('ATTENTION-OS', W / 2, 150);
+    x.fillStyle = MUTED; x.font = PX(lang === 'zh' ? 32 : 22);
+    x.fillText(t('cardKicker'), W / 2, 206);
 
-    // sprite, big
-    const S = 14, sw = 16 * S;
-    drawSprite(x, SPRITES[an.type], S, (W - sw) / 2, 296);
-
-    // archetype name + rank
+    // red banner with archetype name in white
     const [aName, aTag] = t('archetypes')[an.type];
-    x.fillStyle = GB0;
-    x.font = lang === 'zh' ? '88px "DotGothic16","Noto Sans SC"' : LATIN(52);
-    x.fillText(aName, W / 2, 620);
-    x.fillStyle = GB1; x.font = PX(lang === 'zh' ? 32 : 24);
-    x.fillText(t('cardBeat')(an.overall), W / 2, 678);
+    x.fillStyle = RED; x.fillRect(84, 244, W - 168, 112);
+    x.fillStyle = WHITE;
+    x.font = lang === 'zh' ? '700 64px "Noto Sans SC","DotGothic16"' : LATIN(42);
+    x.fillText(aName, W / 2, lang === 'zh' ? 324 : 318);
+
+    // big colored sprite on a square gray pedestal
+    x.fillStyle = INK; x.fillRect(W / 2 - 172, 396, 344, 344);
+    x.fillStyle = PANEL; x.fillRect(W / 2 - 164, 404, 328, 328);
+    const S = 17, sw = 16 * S;
+    drawSprite(x, SPRITES[an.type], S, (W - sw) / 2, 432, PAL[an.type]);
+
+    // rank chip in gold
+    x.font = PX(lang === 'zh' ? 30 : 24);
+    const rankTxt = t('cardBeat')(an.overall);
+    const tw = x.measureText(rankTxt).width;
+    x.fillStyle = GOLD; x.fillRect(W / 2 - tw / 2 - 24, 748, tw + 48, 60);
+    x.fillStyle = INK; x.fillText(rankTxt, W / 2, 790);
+
+    // three HP bars, colored by value rule
+    const labels = STR[lang].stageEn;
+    const bx = 130, bw = W - 260;
+    const cellW = 33, cellGap = Math.floor((bw - 20 * cellW) / 19); // 20 blocks
+    let y = 890;
+    for (let i = 0; i < 3; i++) {
+      const s = an.scores[i];
+      const filled = Math.round(s / 5);
+      const col = hpHex(s);
+      x.fillStyle = INK; x.font = LATIN(24); x.textAlign = 'left';
+      x.fillText(labels[i], bx, y);
+      x.textAlign = 'right';
+      x.fillText(String(s), W - bx, y);
+      for (let k = 0; k < 20; k++) {
+        x.fillStyle = k < filled ? col : PANEL;
+        x.fillRect(bx + k * (cellW + cellGap), y + 20, cellW, 36);
+      }
+      y += 112;
+    }
+    x.textAlign = 'center';
 
     // tagline — wrap to width
-    x.fillStyle = GB0;
-    x.font = lang === 'zh' ? '42px "DotGothic16","Noto Sans SC"' : LATIN(22);
-    const lh = lang === 'zh' ? 58 : 44;
-    const maxW = W - 260;
+    x.fillStyle = INK;
+    x.font = lang === 'zh' ? '40px "DotGothic16","Noto Sans SC"' : LATIN(20);
+    const lh = lang === 'zh' ? 56 : 40;
+    const maxW = W - 240;
     const words = lang === 'zh' ? [...aTag] : aTag.split(' ');
     const joiner = lang === 'zh' ? '' : ' ';
-    let line = '', ty = 756;
+    let line = '', ty = 1226;
     for (const w of words) {
       const test = line ? line + joiner + w : w;
       if (x.measureText(test).width > maxW && line && !'。，！？；、）”'.includes(w)) {
@@ -1294,32 +1403,12 @@
     }
     if (line) { x.fillText(line, W / 2, ty); ty += lh; }
 
-    // segmented bars
-    const labels = STR[lang].stageEn;
-    const bx = 130, bw = W - 260;
-    const cellW = 33, cellGap = Math.floor((bw - 20 * cellW) / 19); // 20 blocks
-    let y = 950;
-    for (let i = 0; i < 3; i++) {
-      const s = an.scores[i];
-      const filled = Math.round(s / 5);
-      x.fillStyle = GB0; x.font = LATIN(26); x.textAlign = 'left';
-      x.fillText(labels[i], bx, y);
-      x.textAlign = 'right';
-      x.fillText(String(s), W - bx, y);
-      for (let k = 0; k < 20; k++) {
-        x.fillStyle = k < filled ? GB0 : GB2;
-        x.fillRect(bx + k * (cellW + cellGap), y + 22, cellW, 38);
-      }
-      y += 120;
-    }
-    x.textAlign = 'center';
-
     // footer
-    x.fillStyle = GB0; x.fillRect(120, H - 200, W - 240, 8);
-    x.font = PX(lang === 'zh' ? 36 : 26); x.fillStyle = GB0;
-    x.fillText(t('cardFooter'), W / 2, H - 130);
-    x.font = LATIN(20); x.fillStyle = GB1;
-    x.fillText(REPO, W / 2, H - 82);
+    x.fillStyle = INK; x.fillRect(120, 1300, W - 240, 6);
+    x.font = PX(lang === 'zh' ? 32 : 22); x.fillStyle = INK;
+    x.fillText(t('cardFooter'), W / 2, 1352);
+    x.font = LATIN(16); x.fillStyle = MUTED;
+    x.fillText(REPO, W / 2, 1386);
     x.textAlign = 'left';
     return c;
   }
