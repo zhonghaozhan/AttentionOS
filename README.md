@@ -40,10 +40,14 @@ AttentionOS treats your attention like the operating system resource it is:
 
 This is an early prototype. Three pieces:
 
-### 1. The Attention Audit (browser, zero install)
-A 60-second sustained-attention test ([SART](https://doi.org/10.1016/S0028-3932(97)00015-8)-style)
-that ends in a score and a shareable card. Open
-[`demo/index.html`](demo/index.html) in a browser. No data leaves the page.
+### 1. The Attention Check-up (browser, zero install, 中/EN)
+A 60-second, 3-stage micro-game that profiles the three attentional networks
+of Posner & Petersen — **alerting, orienting, executive** (ANT paradigm,
+Fan et al. 2002) — with live per-response scoring, and ends in your
+**attention type** (Cheetah / Hawkeye / Fortress / Commander…), a radar
+profile, and a personalized attention-allocation prescription. Shareable
+result card included. Open [`demo/index.html`](demo/index.html) in a browser.
+No data leaves the page. Theory & honest limitations: [`docs/SCIENCE.md`](docs/SCIENCE.md).
 
 ### 2. `attn` — the collector & profiler (CLI)
 A local-first attention profiler. Polls window focus, stores events in SQLite
