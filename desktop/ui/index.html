@@ -63,31 +63,43 @@
   #ring { position: fixed; inset: 0; pointer-events: none; }
   .ring-btn {
     position: absolute;
-    width: 30px; height: 30px;
-    background: #fff;
-    border: 3px solid #302848;
-    box-shadow: 2px 2px 0 rgba(48,40,72,0.35);
+    width: 32px; height: 32px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(48, 40, 72, 0.22);
+    border-radius: 50%;
+    box-shadow: 0 2px 10px rgba(48, 40, 72, 0.20);
+    backdrop-filter: blur(4px);
     color: #302848;
-    font-size: 14px; line-height: 1;
+    font-size: 13px; line-height: 1;
     display: grid; place-items: center;
     cursor: pointer;
     pointer-events: none;                 /* invisible buttons must not eat hover */
     opacity: 0;
-    transform: scale(0.5);
-    transition: opacity 0.15s steps(3), transform 0.15s steps(3);
+    transform: scale(0.4);
+    transition: opacity 0.22s cubic-bezier(0.22,1,0.36,1), transform 0.22s cubic-bezier(0.22,1,0.36,1);
     user-select: none;
   }
   #ring.show .ring-btn { opacity: 1; transform: scale(1); pointer-events: auto; }
-  .ring-btn:hover { background: #f8b830; }
-  .ring-btn:active { transform: translate(2px, 2px); }
-  #bubble {
+  #ring.show .ring-btn:nth-child(2) { transition-delay: 0.035s; }
+  #ring.show .ring-btn:nth-child(3) { transition-delay: 0.07s; }
+  #ring.show .ring-btn:nth-child(4) { transition-delay: 0.105s; }
+  .ring-btn:hover {
     background: #fff;
-    border: 3px solid #302848;
-    box-shadow: 3px 3px 0 rgba(48,40,72,0.3);
+    border-color: rgba(48, 40, 72, 0.5);
+    box-shadow: 0 3px 14px rgba(48, 40, 72, 0.3);
+    transform: scale(1.12);
+  }
+  .ring-btn:active { transform: scale(0.95); }
+  #bubble {
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(48, 40, 72, 0.22);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(48, 40, 72, 0.18);
+    backdrop-filter: blur(4px);
     color: #302848;
     font-size: 10px;
     font-weight: bold;
-    padding: 5px 8px;
+    padding: 6px 9px;
     margin-bottom: 6px;
     max-width: 170px;
     text-align: center;
@@ -131,10 +143,11 @@
   <canvas id="petCanvas" width="120" height="120" data-tauri-drag-region></canvas>
   <div id="dockTab" title="AttentionOS — BRB"><canvas id="tabIcon" width="16" height="16"></canvas><span>BRB</span></div>
   <div id="ring">
-    <div class="ring-btn" id="rbDash"  style="left:6px;   top:118px" title="今日报告">▦</div>
-    <div class="ring-btn" id="rbDock"  style="left:144px; top:118px" title="挂到屏幕边缘">⇥</div>
-    <div class="ring-btn" id="rbFlow"  style="left:6px;   top:162px" title="心流模式 2h">☾</div>
-    <div class="ring-btn" id="rbCard"  style="left:144px; top:162px" title="状态卡 / 领养">❐</div>
+    <!-- arc around the pet: 210° / 250° / 290° / 330° on a 62px radius -->
+    <div class="ring-btn" id="rbDash"  style="left:20px;  top:141px" title="今日报告">▦</div>
+    <div class="ring-btn" id="rbFlow"  style="left:53px;  top:112px" title="心流模式 2h">☾</div>
+    <div class="ring-btn" id="rbCard"  style="left:95px;  top:112px" title="状态卡 / 领养">❐</div>
+    <div class="ring-btn" id="rbDock"  style="left:128px; top:141px" title="挂到屏幕边缘">⇥</div>
   </div>
 
   <div id="panel">
@@ -201,7 +214,7 @@
   function drawSprite(grid, pal, dy, blink, sy = 1) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     const N = grid.length;                            // 16 for archetypes, 24 for the ghost
-    const PS = N > 16 ? 4 : S;                        // pixel size adapts to grid resolution
+    const PS = N > 16 ? 3 : 4;                        // ~72px / 64px — present, not prominent
     const ox = (canvas.width - N * PS) / 2;
     const base = (canvas.height + N * PS) / 2;        // bottom edge (anchor squash here)
     const [er0, er1] = EYES[species] || [6, 7];
