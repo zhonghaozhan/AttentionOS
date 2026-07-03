@@ -77,6 +77,7 @@
     <input id="codeInput" placeholder="粘贴存档码 attn1.…" spellcheck="false">
     <div id="err"></div>
     <button id="importBtn">领养 / 导入存档码</button>
+    <button id="dashBtn" style="background:#3870c0">完整报告 (Pro)</button>
     <button class="close" id="closeBtn">关闭</button>
   </div>
 
@@ -132,13 +133,16 @@
     }
   }
 
+  let sick = false; // recovery-debt thermal throttling (Pro)
   function tick() {
     frame++;
     const pal = PAL[species] || PAL.balanced;
     let dy = 0, blink = false;
-    if (mood === 'focused') dy = -Math.abs(Math.sin(frame / 4)) * 6;         // happy bounce
-    else if (mood === 'frazzled') dy = (frame % 2 ? 1 : -1) * 2;             // jitter
-    else if (mood === 'sleeping') { dy = 2; blink = true; }                  // eyes closed
+    const m = (sick && mood !== 'sleeping') ? 'sick' : mood;
+    if (m === 'focused') dy = -Math.abs(Math.sin(frame / 4)) * 6;            // happy bounce
+    else if (m === 'frazzled') dy = (frame % 2 ? 1 : -1) * 2;                // jitter
+    else if (m === 'sleeping') { dy = 2; blink = true; }                     // eyes closed
+    else if (m === 'sick') { dy = 4; blink = frame % 10 < 5; }               // droop, heavy lids
     else blink = frame % 24 < 2;                                            // idle blink
     drawSprite(SLIME, pal, 5, dy, blink);
   }
@@ -172,6 +176,18 @@
   refresh();
   setInterval(refresh, 10000);
 
+  // thermal check (recovery debt) — cheap cadence, expensive query
+  async function thermal() {
+    try {
+      const r = await invoke('get_report', { offsetDays: 0 });
+      const wasSick = sick;
+      sick = r.recovery_debt >= 1.5;
+      if (sick && !wasSick) say('过热保护中… 连续透支了，今天降频运行');
+    } catch (e) {}
+  }
+  thermal();
+  setInterval(thermal, 30 * 60 * 1000);
+
   /* ---- panel & import ---- */
   const panel = document.getElementById('panel');
   canvas.addEventListener('dblclick', () => panel.classList.add('show'));
@@ -187,6 +203,10 @@
     } catch (e) {
       document.getElementById('err').textContent = String(e);
     }
+  });
+  document.getElementById('dashBtn').addEventListener('click', () => {
+    invoke('open_dashboard').catch(() => {});
+    panel.classList.remove('show');
   });
   invoke('get_profile').then(p => { if (p && p.type) species = p.type; }).catch(() => {});
 </script>

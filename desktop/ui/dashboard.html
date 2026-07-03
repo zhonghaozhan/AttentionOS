@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>AttentionOS Pro — 注意力报告</title>
+<style>
+  :root {
+    --paper: #f8f8f0; --ink: #302848; --red: #e04838; --blue: #3870c0;
+    --gold: #f8b830; --green: #48d068; --yellow: #f8d030; --gray: #e8e8e0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Courier New", monospace;
+    background: var(--paper); color: var(--ink);
+    padding: 18px; font-size: 12px;
+    user-select: none; -webkit-user-select: none;
+  }
+  .masthead {
+    background: var(--ink); color: #fff;
+    padding: 10px 14px; font-weight: bold; letter-spacing: 2px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .masthead .nav button {
+    font-family: inherit; font-weight: bold; background: none; color: #fff;
+    border: 2px solid #fff; padding: 2px 10px; cursor: pointer; margin-left: 6px;
+  }
+  .masthead .nav button:disabled { opacity: 0.3; cursor: default; }
+  .win {
+    background: #fff; border: 3px solid var(--ink);
+    box-shadow: 4px 4px 0 rgba(48,40,72,0.25);
+    margin-top: 14px; padding: 12px;
+    position: relative;
+  }
+  .win .tab {
+    position: absolute; top: -10px; left: 10px;
+    background: var(--red); color: #fff; font-weight: bold;
+    font-size: 10px; letter-spacing: 1px; padding: 2px 8px;
+  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; }
+  .metric { display: flex; flex-direction: column; gap: 6px; }
+  .metric .row { display: flex; justify-content: space-between; align-items: baseline; }
+  .metric .nm { font-weight: bold; }
+  .metric .v { font-size: 20px; font-weight: bold; }
+  .metric .sub { color: #888; font-size: 10px; }
+  .bar { height: 12px; background: var(--gray); border: 2px solid var(--ink); position: relative; }
+  .bar i { position: absolute; inset: 0; width: 0; transition: width 0.6s steps(12); }
+  .g { background: var(--green); } .y { background: var(--yellow); } .r { background: var(--red); } .b { background: var(--blue); }
+  .timeline { display: flex; gap: 1px; margin-top: 6px; }
+  .timeline i { flex: 1; height: 26px; background: var(--gray); }
+  .timeline i.s1 { background: var(--yellow); }
+  .timeline i.s2 { background: var(--green); }
+  .tl-labels { display: flex; justify-content: space-between; color: #999; font-size: 9px; margin-top: 3px; }
+  .src-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .src-row .n { width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .src-row .bar { flex: 1; }
+  .src-row .m { width: 64px; text-align: right; color: #888; }
+  .gap-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px dashed #ccc; flex-wrap: wrap; }
+  .gap-row:last-child { border-bottom: none; }
+  .chip {
+    font-family: inherit; font-size: 10px; font-weight: bold;
+    border: 2px solid var(--ink); background: #fff; padding: 2px 8px; cursor: pointer;
+  }
+  .chip.sel { background: var(--gold); }
+  .rx li { list-style: none; padding: 6px 0; border-bottom: 1px dashed #ccc; line-height: 1.6; }
+  .rx li:last-child { border-bottom: none; }
+  .rx li::before { content: "► "; color: var(--red); font-weight: bold; }
+  .pet-note { color: #888; font-size: 10px; margin-top: 10px; line-height: 1.7; }
+  .empty { color: #999; padding: 8px 0; }
+  b.warn { color: var(--red); }
+</style>
+</head>
+<body>
+  <div class="masthead">
+    <span>ATTENTION-OS PRO · <span id="date">—</span></span>
+    <span class="nav">
+      <button id="prev">◀</button>
+      <button id="next">▶</button>
+      <button id="reload">↻</button>
+    </span>
+  </div>
+
+  <div class="win">
+    <div class="tab">今日时间线</div>
+    <div class="timeline" id="timeline"></div>
+    <div class="tl-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+    <div class="pet-note">■ 绿=深度专注块 ■ 黄=浅层/碎片化 ■ 灰=离开 · 共追踪 <b id="tracked">—</b> 分钟</div>
+  </div>
+
+  <div class="win">
+    <div class="tab">五项指标 (METRICS.md)</div>
+    <div class="grid" id="metrics"></div>
+  </div>
+
+  <div class="grid">
+    <div class="win">
+      <div class="tab">时间去哪了</div>
+      <div id="sources"></div>
+    </div>
+    <div class="win">
+      <div class="tab">头号打断者</div>
+      <div id="interrupters"></div>
+    </div>
+  </div>
+
+  <div class="win">
+    <div class="tab">空闲段标注 · 喂给宠物一句实话</div>
+    <div id="gaps"></div>
+  </div>
+
+  <div class="win">
+    <div class="tab">本日处方</div>
+    <ul class="rx" id="rx"></ul>
+    <div class="pet-note" id="petNote"></div>
+  </div>
+
+<script type="module">
+  const invoke = window.__TAURI__.core.invoke;
+  let offset = 0;
+
+  const GAP_LABELS = ['休息', '开会', '刷手机', '外出', '其他'];
+
+  function bar(v, max, cls) {
+    const pct = Math.min(100, Math.round(v / max * 100));
+    return `<div class="bar"><i class="${cls}" style="width:${pct}%"></i></div>`;
+  }
+
+  function metricCard(nm, v, unit, sub, quality) {
+    // quality: 'g' | 'y' | 'r'
+    return `<div class="metric">
+      <div class="row"><span class="nm">${nm}</span><span class="v">${v}<small style="font-size:10px"> ${unit}</small></span></div>
+      ${bar(100, 100, quality)}
+      <div class="sub">${sub}</div>
+    </div>`;
+  }
+
+  function render(r) {
+    document.getElementById('date').textContent = r.date;
+    document.getElementById('tracked').textContent = r.tracked_min;
+    document.getElementById('next').disabled = offset === 0;
+
+    document.getElementById('timeline').innerHTML =
+      r.timeline.map(s => `<i class="s${s}"></i>`).join('');
+
+    const fhlQ = r.fhl_min >= 15 ? 'g' : r.fhl_min >= 7 ? 'y' : 'r';
+    const csrQ = r.csr_per_hr <= 6 ? 'g' : r.csr_per_hr <= 15 ? 'y' : 'r';
+    const ilQ = r.interrupt_pct <= 25 ? 'g' : r.interrupt_pct <= 45 ? 'y' : 'r';
+    const abQ = r.ab_burn <= 1.0 ? 'g' : r.ab_burn <= 1.25 ? 'y' : 'r';
+    const rdQ = r.recovery_debt < 0.5 ? 'g' : r.recovery_debt < 1.5 ? 'y' : 'r';
+    document.getElementById('metrics').innerHTML = [
+      metricCard('专注半衰期 FHL', r.fhl_min, 'min', `最长专注块 ${r.longest_block_min} min`, fhlQ),
+      metricCard('切换率 CSR', r.csr_per_hr, '/hr', `恢复成本 ≈ ${r.recovery_min} min（深度块被打断 × 9.5min）`, csrQ),
+      metricCard('打断负载 IL', r.interrupt_pct, '%', `外部打断 ${r.interrupt_pct}% · 自切换 ${r.self_pct}%`, ilQ),
+      metricCard('注意力预算', r.deep_focus_min, 'min', `容量 ${r.ab_capacity_min} min（近${r.history_days}天 p75）· 消耗 ${Math.round(r.ab_burn * 100)}%`, abQ),
+      metricCard('恢复债 RD', r.recovery_debt, '', r.recovery_debt >= 1.5 ? '⚠ 过热：宠物已进入生病状态' : r.recovery_debt >= 0.5 ? '借来的时间——安排恢复' : '可持续', rdQ),
+    ].join('');
+
+    const maxSrc = Math.max(1, ...r.per_source.map(s => s[1]));
+    document.getElementById('sources').innerHTML = r.per_source.length
+      ? r.per_source.map(([n, m]) =>
+          `<div class="src-row"><span class="n">${n}</span>${bar(m, maxSrc, 'b')}<span class="m">${m} min</span></div>`).join('')
+      : '<div class="empty">今天还没有数据</div>';
+
+    document.getElementById('interrupters').innerHTML = r.interrupters.length
+      ? r.interrupters.map(([n, c]) =>
+          `<div class="src-row"><span class="n">${n}</span><span class="m" style="color:var(--red)">${c} 次抢占</span></div>`).join('')
+      : '<div class="empty">没有外部打断——干净的一天</div>';
+
+    document.getElementById('gaps').innerHTML = r.gaps.length
+      ? r.gaps.map((g, i) => `<div class="gap-row" data-i="${i}">
+          <b>${g.hhmm}</b><span style="color:#888">${g.min} min</span>
+          ${GAP_LABELS.map(l => `<button class="chip${g.label === l ? ' sel' : ''}" data-start="${g.start}" data-l="${l}">${l}</button>`).join('')}
+        </div>`).join('')
+      : '<div class="empty">没有 ≥15 分钟的空档</div>';
+    document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', async () => {
+      await invoke('annotate_gap', { gapStart: +c.dataset.start, label: c.dataset.l }).catch(() => {});
+      c.parentElement.querySelectorAll('.chip').forEach(x => x.classList.remove('sel'));
+      c.classList.add('sel');
+    }));
+
+    // rule-based prescription
+    const rx = [];
+    if (r.fhl_min < 7 && r.tracked_min > 60)
+      rx.push(`专注半衰期只有 <b class="warn">${r.fhl_min} min</b>：把最重要的一件事放进 90 分钟保护块，物理隔离手机，其余窗口全关。`);
+    if (r.interrupt_pct > 40)
+      rx.push(`外部打断占 <b class="warn">${r.interrupt_pct}%</b>：通知折叠成批次（整点查看一次），头号打断者${r.interrupters[0] ? `是 <b class="warn">${r.interrupters[0][0]}</b>` : ''}——给它定固定检查时段。`);
+    else if (r.self_pct > 70 && r.csr_per_hr > 10)
+      rx.push(`${r.self_pct}% 的切换是<b class="warn">自己发起的</b>：打断已经内化成习惯。试 25 分钟番茄块——每忍住一次想切走的冲动，都是一组执行网络训练。`);
+    if (r.recovery_min > 60)
+      rx.push(`今天约 <b class="warn">${r.recovery_min} min</b> 消失在被打断后的重新沉浸里——这是最贵的一项隐形税。`);
+    if (r.ab_burn > 1.0)
+      rx.push(`预算超支 ${Math.round((r.ab_burn - 1) * 100)}%：超容量的深度工作会从明天借能量，恢复债 ${r.recovery_debt}。今晚早点收工。`);
+    if (r.recovery_debt >= 1.5)
+      rx.push(`<b class="warn">恢复债 ≥ 1.5，过热保护已触发</b>：宠物生病不是卖萌，是数据。今天安排一段真正的离线休息。`);
+    if (!rx.length)
+      rx.push(r.tracked_min > 120 ? '各项指标健康。把长板用在刀刃上：最难的任务安排到你精力峰值的时段。' : '数据还太少。让采集器多跑一会儿，或者先去干活——宠物会看着的。');
+    document.getElementById('rx').innerHTML = rx.map(x => `<li>${x}</li>`).join('');
+
+    document.getElementById('petNote').innerHTML =
+      '宠物行为联动：切换率 &gt; 25/hr → 炸毛 · 深度块进行中 → 心流蹦跳 · 恢复债 ≥ 1.5 → 生病（过热保护）· 空闲 → 睡觉';
+  }
+
+  async function load() {
+    try { render(await invoke('get_report', { offsetDays: offset })); }
+    catch (e) { document.getElementById('rx').innerHTML = `<li>后端未就绪：${e}</li>`; }
+  }
+  document.getElementById('prev').addEventListener('click', () => { offset++; load(); });
+  document.getElementById('next').addEventListener('click', () => { if (offset > 0) { offset--; load(); } });
+  document.getElementById('reload').addEventListener('click', load);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  load();
+</script>
+</body>
+</html>

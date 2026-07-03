@@ -22,6 +22,15 @@
         "skipTaskbar": true,
         "x": 1200,
         "y": 80
+      },
+      {
+        "label": "dashboard",
+        "title": "AttentionOS Pro — 注意力报告",
+        "url": "dashboard.html",
+        "width": 960,
+        "height": 820,
+        "visible": false,
+        "resizable": true
       }
     ],
     "security": {

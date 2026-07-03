@@ -31,6 +31,8 @@ npm run build      # 产出 src-tauri/target/release/bundle/macos/AttentionOS.ap
 - [x] 心情引擎：近 30 分钟切换率 + 今日专注块 → sleeping / calm / focused / frazzled
 - [x] 存档码导入（`attn1.…`，见 [docs/TIERS.md](../docs/TIERS.md)）→ 决定物种
 - [x] 托盘菜单：显示/隐藏、退出
+- [x] **Pro dashboard**：五项指标 + 时间线 + 时间去向 + 头号打断者 + 空闲段标注 + 规则化处方（托盘 →「今日报告」，或宠物面板 →「完整报告」）
+- [x] 宠物过热保护：恢复债 ≥ 1.5 → 生病状态（数据驱动，不是卖萌）
 - [ ] 六物种精灵全套 + 进化形态（当前全物种共用史莱姆底模，仅配色不同）
 - [ ] 每日结算卡（分享图导出）
 - [ ] Focus Shield（宣告专注块，宠物替你挡通知）

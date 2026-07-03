@@ -5,6 +5,8 @@
 
 #![cfg_attr(all(not(debug_assertions), target_os = "windows"), windows_subsystem = "windows")]
 
+mod report;
+
 use base64::Engine;
 use rusqlite::Connection;
 use serde::Serialize;
@@ -30,7 +32,7 @@ fn profile_path() -> std::path::PathBuf {
     dirs::home_dir().unwrap().join(".attentionos").join("profile.json")
 }
 
-fn open_db() -> Connection {
+pub fn open_db() -> Connection {
     let conn = Connection::open(db_path()).expect("open attn.db");
     conn.execute(
         "CREATE TABLE IF NOT EXISTS focus_events (
@@ -196,13 +198,32 @@ fn get_profile() -> Option<serde_json::Value> {
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![get_state, import_profile, get_profile])
+        .invoke_handler(tauri::generate_handler![
+            get_state,
+            import_profile,
+            get_profile,
+            report::get_report,
+            report::annotate_gap,
+            report::open_dashboard
+        ])
         .setup(|app| {
             std::thread::spawn(collector_thread);
 
+            // closing the dashboard hides it so the tray can reopen it
+            if let Some(dash_win) = app.get_webview_window("dashboard") {
+                let dw = dash_win.clone();
+                dash_win.on_window_event(move |e| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = e {
+                        api.prevent_close();
+                        dw.hide().ok();
+                    }
+                });
+            }
+
             let show = MenuItem::with_id(app, "show", "显示 / 隐藏宠物", true, None::<&str>)?;
+            let dash = MenuItem::with_id(app, "dash", "今日报告 (Pro)", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出 AttentionOS", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let menu = Menu::with_items(app, &[&show, &dash, &quit])?;
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
@@ -211,6 +232,12 @@ fn main() {
                     "show" => {
                         if let Some(w) = app.get_webview_window("pet") {
                             if w.is_visible().unwrap_or(false) { w.hide().ok(); } else { w.show().ok(); }
+                        }
+                    }
+                    "dash" => {
+                        if let Some(w) = app.get_webview_window("dashboard") {
+                            w.show().ok();
+                            w.set_focus().ok();
                         }
                     }
                     "quit" => app.exit(0),
