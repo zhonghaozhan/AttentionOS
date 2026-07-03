@@ -24,19 +24,19 @@
     transition: opacity 0.6s;
   }
   #petCanvas:active { cursor: grabbing; }
-  /* the "be right back" sign: a translucent hanging plaque, not a color block */
+  /* the "be right back" sign: a translucent plaque hanging off the RIGHT
+     screen edge — bordered on the desktop-facing side, flush on the edge side */
   #dockTab {
     position: fixed;
     left: 0; top: 50%;
     transform: translateY(-50%);
-    width: 24px; height: 74px;
+    width: 26px; height: 74px;
     background: rgba(248, 248, 240, 0.55);
-    border: 2px solid rgba(48, 40, 72, 0.65);
-    border-left: none;
-    border-radius: 0 3px 3px 0;
-    box-shadow: 1px 1px 0 rgba(48, 40, 72, 0.15);
+    border: 1.5px solid rgba(48, 40, 72, 0.55);
+    border-right: none;
+    border-radius: 4px 0 0 4px;
     display: none;
-    cursor: pointer;
+    cursor: grab;
     align-items: center;
     justify-content: flex-start;
     flex-direction: column;
@@ -44,7 +44,9 @@
     padding-top: 3px;
     transition: background 0.2s, border-color 0.2s;
     backdrop-filter: blur(1.5px);
+    touch-action: none;
   }
+  #dockTab:active { cursor: grabbing; }
   #dockTab.show { display: flex; }
   #dockTab:hover { background: rgba(248, 248, 240, 0.9); border-color: #302848; }
   #dockTab::before {                       /* hanging strap */
@@ -534,11 +536,41 @@
     const ok = await slideTo(g.monX + g.monW - 26, g.y);
     if (ok) { peeked = false; dockTab.classList.add('show'); }
   }
-  // the sign itself is the only reveal trigger — hovering the window's
-  // invisible regions must not yank the pet out
+  // the sign: CLICK reveals (hover was too easy to trigger by accident);
+  // drag vertically to slide it along the screen edge; drag LEFT to pull
+  // the ghost out where you dropped it
   let backTimer = null;
-  dockTab.addEventListener('mouseenter', peekOut);
-  dockTab.addEventListener('click', peekOut);
+  let tabDrag = null, tabMoveBusy = false;
+  dockTab.addEventListener('pointerdown', async e => {
+    e.preventDefault();
+    dockTab.setPointerCapture(e.pointerId);
+    const g = await geo();
+    tabDrag = { sx: e.screenX, sy: e.screenY, y0: g.y, g, moved: false };
+  });
+  dockTab.addEventListener('pointermove', e => {
+    if (!tabDrag || !win || !LPos) return;
+    const dx = e.screenX - tabDrag.sx;
+    const dy = e.screenY - tabDrag.sy;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) tabDrag.moved = true;
+    if (dx < -40) {                                   // pulled left: release the ghost here
+      const t = tabDrag; tabDrag = null;
+      docked = false; peeked = false;
+      dockTab.classList.remove('show');
+      slideTo(t.g.monX + t.g.monW - 200, t.y0 + dy);
+      return;
+    }
+    if (tabDrag.moved && !tabMoveBusy) {              // ride along the edge
+      tabMoveBusy = true;
+      win.setPosition(new LPos(tabDrag.g.monX + tabDrag.g.monW - 26, tabDrag.y0 + dy))
+        .catch(() => {})
+        .finally(() => { tabMoveBusy = false; });
+    }
+  });
+  dockTab.addEventListener('pointerup', () => {
+    if (tabDrag && !tabDrag.moved) peekOut();         // a plain click opens it
+    tabDrag = null;
+  });
+  dockTab.addEventListener('pointercancel', () => { tabDrag = null; });
   document.addEventListener('mouseenter', () => clearTimeout(backTimer));
   document.addEventListener('mouseleave', () => {
     if (docked && peeked && !panel.classList.contains('show')) {
