@@ -285,19 +285,25 @@
   let sick = false;      // recovery-debt thermal throttling (Pro)
   let grabbed = 0;       // timestamp while the user is holding/dragging the pet
   let danceEnd = 0;      // frame until which the break choreography runs
+  let quietUntil = 0;    // "知道了" — acknowledged, suppress the fuss for a while
   function breakDance() { danceEnd = frame + 26; }
   function tick() {
     frame++;
     const pal = PAL[species] || PAL.balanced;
     const grid = SPRITES[species] || SPRITES.balanced;
     let dy = 0, blink = false, sy = 1;
-    const m = (sick && mood !== 'sleeping') ? 'sick' : mood;
+    let m = (sick && mood !== 'sleeping') ? 'sick' : mood;
+    if (m === 'frazzled' && Date.now() < quietUntil) m = 'calm';   // acknowledged — stay quiet
+    let burst = false;
     if (m === 'focused') {                                  // flow: joyful bounce w/ squash-stretch
       const b = Math.abs(Math.sin(frame / 4));
       dy = -b * 7;
       sy = 1 + (b - 0.5) * 0.1;
     } else if (m === 'frazzled') {
-      dy = (frame % 2 ? 1 : -1) * 2;
+      // periodic short bursts, not a permanent tantrum — non-invasive even when alarmed
+      burst = frame % 44 < 6;
+      dy = burst ? (frame % 2 ? 1 : -1) * 2 : 1;
+      if (!burst) blink = frame % 24 < 2;
     } else if (m === 'sleeping') {
       dy = 2; blink = true;
       sy = 1 + Math.sin(frame / 8) * 0.02;                  // slow breathing
@@ -332,7 +338,7 @@
     if (m === 'sleeping') fxSleep(ox, top);
     else if (m === 'focused') fxSparkle(ox, top);
     else if (m === 'sick') fxSweat(ox, top);
-    else if (m === 'frazzled') fxBang(ox, top);
+    else if (m === 'frazzled' && burst) fxBang(ox, top);
     // non-invasive by default: the ghost fades further into the desktop when idle
     const ghosty = FLOATERS.has(species) ? 0.12 : 0;
     canvas.style.opacity = (m === 'calm' || m === 'sleeping') ? 0.85 - ghosty : 1 - ghosty / 2;
@@ -536,6 +542,15 @@
   canvas.addEventListener('pointerdown', () => {
     if (docked && peeked) { docked = false; peeked = false; dockTab.classList.remove('show'); }
     grabbed = Date.now();
+    // acknowledge: a tap answers whatever the pet is fussing about
+    // (must live on pointerdown — the drag region swallows click events)
+    if (breakInvited) {
+      breakInvited = false; workSec = 0;
+      say('好，重新计时。去吧。', 2000);
+    } else if (mood === 'frazzled' && Date.now() >= quietUntil) {
+      quietUntil = Date.now() + 10 * 60 * 1000;
+      say('知道了，我安静 10 分钟。', 2200);
+    }
   });
   document.addEventListener('pointerup', () => { grabbed = 0; leanDir = 0; });
   window.addEventListener('blur', () => { setTimeout(() => { grabbed = 0; leanDir = 0; }, 400); });
@@ -566,9 +581,6 @@
       say(`连续 ${BREAK_MIN} 分钟了——站起来伸个腰？点我一下重新计时`, 9000);
     }
   }, 10000);
-  canvas.addEventListener('click', () => {
-    if (breakInvited) { breakInvited = false; workSec = 0; say('好，重新计时。去吧。', 2000); }
-  });
   invoke('get_profile').then(p => { if (p && p.type) species = p.type; }).catch(() => {});
 
   // preview/QA hooks: ?species=cheetah&mood=focused
