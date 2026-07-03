@@ -41,7 +41,11 @@ Fan et al. 2002），全程实时评分、连击、音效、过关结算：
 |---|---|---|
 | **AttentionOS mini** | 60s 浏览器体检（本页 demo） | ✅ 可玩 |
 | **AttentionOS** | 桌宠 + GUI Dashboard + 本地采集器（[desktop/](desktop/)） | 🛠 可跑：六物种、边缘挂靠、心流隐身、25min 休息邀请、五指标报告 |
-| **AttentionOS Pro** | CLI + MCP server + agent skill + ASCII 宠物（`attn pet`） | 🛠 CLI 可用，MCP 设计中 |
+| **AttentionOS Pro** | CLI + MCP server + agent skill + ASCII 宠物（`attn pet`） | ✅ 可用（[docs/MCP.md](docs/MCP.md)） |
+
+**你的 Agent 现在可以学会不打扰你**：注册 [MCP server](docs/MCP.md) 后，
+Claude Code 会在打断你之前先查 `attention://state`——你在深度专注块里时，
+它自己憋住问题攒着批量问。
 
 测完点「复制存档码」→ 桌宠端双击宠物粘贴导入，你的类型就是它的物种。
 
