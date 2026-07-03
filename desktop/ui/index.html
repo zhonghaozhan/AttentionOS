@@ -25,14 +25,18 @@
   }
   #petCanvas:active { cursor: grabbing; }
   #nameTag {
+    position: fixed;
+    left: 50%; top: 128px;
+    transform: translateX(-50%);
     font-size: 9px; font-weight: bold; letter-spacing: 1px;
     color: rgba(48, 40, 72, 0.75);
-    background: rgba(248, 248, 240, 0.6);
+    background: rgba(248, 248, 240, 0.7);
     border-radius: 6px;
     padding: 1px 7px;
-    margin-top: 2px;
-    transition: opacity 0.6s;
+    opacity: 0;
+    transition: opacity 0.3s;
     user-select: none;
+    pointer-events: none;
   }
   /* the "be right back" sign: a translucent plaque hanging off the RIGHT
      screen edge — bordered on the desktop-facing side, flush on the edge side */
@@ -267,7 +271,11 @@
   const ctx = canvas.getContext('2d');
   const nameTag = document.getElementById('nameTag');
   let petName = localStorage.getItem('attn_pet_name') || 'Boo';
-  nameTag.textContent = petName;
+  function applyName() {
+    nameTag.textContent = petName;
+    document.getElementById('pTitle').textContent = petName;
+  }
+  applyName();
   const S = 5; // pixel scale
   let species = 'ghost';
   let mood = 'calm';
@@ -414,8 +422,9 @@
     if (!engaged) op *= 0.5;
     canvas.style.transition = engaged ? 'opacity 0.25s' : 'opacity 1.8s ease';
     canvas.style.opacity = op;
-    nameTag.style.transition = canvas.style.transition;
-    nameTag.style.opacity = engaged ? op : 0;      // the name is for you, not the room
+    // nameplate over the head: only while engaging, never under the ring/panel
+    nameTag.style.opacity =
+      (engaged && !ring.classList.contains('show') && !panel.classList.contains('show')) ? op : 0;
   }
   setInterval(tick, 140);
 
@@ -516,7 +525,7 @@
     petName = v || 'Boo';
     nameInput.value = petName;
     localStorage.setItem('attn_pet_name', petName);
-    nameTag.textContent = petName;
+    applyName();
     say(`我叫 ${petName}！`, 2200);
   });
 
