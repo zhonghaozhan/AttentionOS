@@ -24,29 +24,40 @@
     transition: opacity 0.6s;
   }
   #petCanvas:active { cursor: grabbing; }
+  /* the "be right back" sign: a translucent hanging plaque, not a color block */
   #dockTab {
     position: fixed;
     left: 0; top: 50%;
     transform: translateY(-50%);
-    width: 20px; height: 66px;
-    background: #48d068;
-    border: 3px solid #302848;
+    width: 24px; height: 74px;
+    background: rgba(248, 248, 240, 0.55);
+    border: 2px solid rgba(48, 40, 72, 0.65);
     border-left: none;
-    box-shadow: 2px 2px 0 rgba(48,40,72,0.3);
+    border-radius: 0 3px 3px 0;
+    box-shadow: 1px 1px 0 rgba(48, 40, 72, 0.15);
     display: none;
     cursor: pointer;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    padding-top: 3px;
+    transition: background 0.2s, border-color 0.2s;
+    backdrop-filter: blur(1.5px);
   }
   #dockTab.show { display: flex; }
-  #dockTab i {
-    width: 6px; height: 6px;
-    background: #302848;
-    animation: tabblink 2.4s steps(2) infinite;
+  #dockTab:hover { background: rgba(248, 248, 240, 0.9); border-color: #302848; }
+  #dockTab::before {                       /* hanging strap */
+    content: "";
+    width: 2px; height: 6px;
+    background: rgba(48, 40, 72, 0.5);
   }
-  @keyframes tabblink { 50% { opacity: 0.25; } }
+  #tabIcon { image-rendering: pixelated; opacity: 0.8; }
+  #dockTab span {
+    font-size: 7px; font-weight: bold; letter-spacing: 1px;
+    color: rgba(48, 40, 72, 0.7);
+    writing-mode: vertical-rl;
+  }
 
   /* radial action ring — game-style hover menu around the pet */
   #ring { position: fixed; inset: 0; pointer-events: none; }
@@ -118,7 +129,7 @@
 <body>
   <div id="bubble"></div>
   <canvas id="petCanvas" width="120" height="120" data-tauri-drag-region></canvas>
-  <div id="dockTab" title="AttentionOS"><i></i></div>
+  <div id="dockTab" title="AttentionOS — BRB"><canvas id="tabIcon" width="16" height="16"></canvas><span>BRB</span></div>
   <div id="ring">
     <div class="ring-btn" id="rbDash"  style="left:6px;   top:118px" title="今日报告">▦</div>
     <div class="ring-btn" id="rbDock"  style="left:144px; top:118px" title="挂到屏幕边缘">⇥</div>
@@ -145,6 +156,7 @@
   /* ---- species sprites: 16x16, '0' transparent '1' outline '2' accent '3' body ---- */
   const INK = '#302848';
   const PAL = {
+    ghost:     [null, INK, '#e8e8e4', '#ffffff'],
     cheetah:   [null, INK, '#e04838', '#f8b830'],
     hawkeye:   [null, INK, '#f8f8f0', '#3870c0'],
     fortress:  [null, INK, '#e04838', '#a8a8a0'],
@@ -153,6 +165,8 @@
     wanderer:  [null, INK, '#f8f8f0', '#9068d8'],
   };
   const SPRITES = {
+    // default: the resident ghost — non-invasive by nature (it floats, it fades)
+    ghost: ['0000111111110000','0001333333331000','0013333333333100','0133333333333310','0133113333113310','0133113333113310','0133113333113310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133133113313310','0131031001301310','0110011001100110'],
     cheetah: ['0110000000000110','1331000000001331','1333100000013331','1323310000133231','1333331111333331','1333333333333331','1332333333332331','1311333333311331','1311333333311331','1333333223333331','1233331111333321','1333333113333331','0133333333333310','0013333223333100','0001333333331000','0000111111110000'],
     hawkeye: ['0000011111100000','0000133333310000','0001333333331000','0013333333331000','0013333113331000','0133333123331000','0133333333331110','0133333333333221','0133333333331110','0133333333331000','0013333333331000','0013233333310000','0001223333100000','0000122331000000','0000011110000000','0000000000000000'],
     fortress: ['0110011001100110','0110011001100110','0111111111111110','0133333333333310','0133333333333310','0133113333113310','0133113333113310','0133333333333310','0132323232323310','0133333333333310','0133331111333310','0133331331333310','0133331221333310','0133331221333310','0133331221333310','0111111111111110'],
@@ -161,14 +175,16 @@
     wanderer: ['0000111111110000','0001333333331000','0013333333333100','0133333333333310','0131133331133310','0131133331133310','0133333333333310','0133233333233310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133133113313310','0131031001301310','0110011001100110'],
   };
   // eye rows per species (outline pixels inside the face) for blinking
-  const EYES = { cheetah: [7, 8], hawkeye: [4, 5], fortress: [5, 6], commander: [6, 6], balanced: [9, 10], wanderer: [4, 5] };
+  const EYES = { ghost: [4, 6], cheetah: [7, 8], hawkeye: [4, 5], fortress: [5, 6], commander: [6, 6], balanced: [9, 10], wanderer: [4, 5] };
+  const FLOATERS = new Set(['ghost', 'wanderer']);   // these hover instead of hopping
 
   const canvas = document.getElementById('petCanvas');
   const ctx = canvas.getContext('2d');
   const S = 5; // pixel scale
-  let species = 'balanced';
+  let species = 'ghost';
   let mood = 'calm';
   let frame = 0;
+  let leanDir = 0;   // set while the window slides: ghost leans into the motion
 
   function px(x, y, color, n = 1) { ctx.fillStyle = color; ctx.fillRect(x, y, S * n, S); }
 
@@ -182,8 +198,15 @@
       if (!v) continue;
       if (blink && v === 1 && y >= er0 && y <= er1 && x >= 3 && x <= 12) v = 3;
       const h = S * sy;
+      const shear = leanDir * ((15 - y) / 15) * S * 1.6;  // lean into motion, top leads
       ctx.fillStyle = pal[v];
-      ctx.fillRect(ox + x * S, base - (16 - y) * h + dy, S, h + 0.5);
+      ctx.fillRect(ox + x * S + shear, base - (16 - y) * h + dy, S, h + 0.5);
+    }
+    // faint motion trail while flying
+    if (leanDir) {
+      ctx.fillStyle = 'rgba(48,40,72,0.25)';
+      const ty = base - 8 * S + dy;
+      for (let i = 1; i <= 3; i++) ctx.fillRect(ox + (leanDir > 0 ? -i * 6 : 16 * S + i * 6 - S), ty + i * 4, S, S);
     }
     return { ox, top: base - 16 * S * sy + dy };
   }
@@ -235,6 +258,10 @@
       sy = 1 + Math.sin(frame / 8) * 0.02;                  // slow breathing
     } else if (m === 'sick') {
       dy = 4; blink = frame % 10 < 5; sy = 0.96;            // droop
+    } else if (FLOATERS.has(species)) {                     // calm ghost: it flies, it never lands
+      blink = frame % 24 < 2;
+      dy = Math.sin(frame / 6) * 3.5 - 3;
+      sy = 1 + Math.sin(frame / 9) * 0.02;
     } else {                                                // calm: idle blink + occasional hop
       blink = frame % 24 < 2;
       const h = frame % 68;
@@ -243,12 +270,15 @@
       else if (h < 10) sy = 0.94;                           // landing squash
       sy += Math.sin(frame / 10) * 0.015;                   // breathing
     }
+    if (FLOATERS.has(species) && (m === 'focused' || m === 'frazzled')) dy -= 3; // never grounded
     const { ox, top } = drawSprite(grid, pal, dy, blink, sy);
     if (m === 'sleeping') fxSleep(ox, top);
     else if (m === 'focused') fxSparkle(ox, top);
     else if (m === 'sick') fxSweat(ox, top);
     else if (m === 'frazzled') fxBang(ox, top);
-    canvas.style.opacity = (m === 'calm' || m === 'sleeping') ? 0.85 : 1;  // recede when nothing to say
+    // non-invasive by default: the ghost fades further into the desktop when idle
+    const ghosty = FLOATERS.has(species) ? 0.12 : 0;
+    canvas.style.opacity = (m === 'calm' || m === 'sleeping') ? 0.85 - ghosty : 1 - ghosty / 2;
   }
   setInterval(tick, 140);
 
@@ -341,6 +371,19 @@
   const dockTab = document.getElementById('dockTab');
   let docked = false, peeked = false, homePos = null, sliding = false;
 
+  function drawTabIcon() {   // 1px-scale mini sprite on the hanging sign
+    const tc = document.getElementById('tabIcon').getContext('2d');
+    tc.clearRect(0, 0, 16, 16);
+    const grid = SPRITES[species] || SPRITES.ghost;
+    const pal = PAL[species] || PAL.ghost;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const v = +grid[y][x];
+      if (!v) continue;
+      tc.fillStyle = pal[v];
+      tc.fillRect(x, y, 1, 1);
+    }
+  }
+
   async function geo() {
     const mon = await TW.window.currentMonitor();
     const sf = mon.scaleFactor || 1;
@@ -355,6 +398,7 @@
     sliding = true;
     try {
       const g = await geo();
+      leanDir = Math.sign(tx - g.x);                 // ghost leans into the flight
       for (let i = 1; i <= steps; i++) {
         const x = g.x + (tx - g.x) * i / steps;
         const y = g.y + (ty - g.y) * i / steps;
@@ -362,6 +406,7 @@
         await new Promise(r => setTimeout(r, 22));
       }
     } catch (e) {}
+    setTimeout(() => { leanDir = 0; }, 120);
     sliding = false;
   }
   async function dockEdge(manual = false) {
@@ -369,10 +414,10 @@
     try {
       const g = await geo();
       homePos = { x: g.x, y: g.y };
-      await slideTo(g.monX + g.monW - 24, g.y);
+      await slideTo(g.monX + g.monW - 26, g.y);
       docked = true; peeked = false;
+      drawTabIcon();
       dockTab.classList.add('show');
-      dockTab.style.background = (PAL[species] || PAL.balanced)[3];
       if (manual) panel.classList.remove('show');
     } catch (e) {}
   }
