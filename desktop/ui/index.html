@@ -339,9 +339,17 @@
     else if (m === 'focused') fxSparkle(ox, top);
     else if (m === 'sick') fxSweat(ox, top);
     else if (m === 'frazzled' && burst) fxBang(ox, top);
-    // non-invasive by default: the ghost fades further into the desktop when idle
+    // visibility follows engagement: full presence while you interact,
+    // fading toward the desktop when left alone — unless it has something to say
     const ghosty = FLOATERS.has(species) ? 0.12 : 0;
-    canvas.style.opacity = (m === 'calm' || m === 'sleeping') ? 0.85 - ghosty : 1 - ghosty / 2;
+    let op = (m === 'calm' || m === 'sleeping') ? 0.85 - ghosty : 1 - ghosty / 2;
+    const engaged = grabbed || Date.now() - lastMove < 8000
+      || panel.classList.contains('show') || ring.classList.contains('show')
+      || bubble.classList.contains('show') || breakInvited || frame < danceEnd
+      || m === 'frazzled' || m === 'sick';
+    if (!engaged) op *= 0.5;
+    canvas.style.transition = engaged ? 'opacity 0.25s' : 'opacity 1.8s ease';
+    canvas.style.opacity = op;
   }
   setInterval(tick, 140);
 
