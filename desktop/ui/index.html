@@ -71,13 +71,13 @@
     font-size: 14px; line-height: 1;
     display: grid; place-items: center;
     cursor: pointer;
-    pointer-events: auto;
+    pointer-events: none;                 /* invisible buttons must not eat hover */
     opacity: 0;
     transform: scale(0.5);
     transition: opacity 0.15s steps(3), transform 0.15s steps(3);
     user-select: none;
   }
-  #ring.show .ring-btn { opacity: 1; transform: scale(1); }
+  #ring.show .ring-btn { opacity: 1; transform: scale(1); pointer-events: auto; }
   .ring-btn:hover { background: #f8b830; }
   .ring-btn:active { transform: translate(2px, 2px); }
   #bubble {
@@ -156,7 +156,8 @@
   /* ---- species sprites: 16x16, '0' transparent '1' outline '2' accent '3' body ---- */
   const INK = '#302848';
   const PAL = {
-    ghost:     [null, INK, '#e8e8e4', '#ffffff'],
+    // ghost body is per-pixel translucent — the desktop shows through it
+    ghost:     [null, 'rgba(48,40,72,0.92)', 'rgba(222,224,238,0.72)', 'rgba(255,255,255,0.72)', 'rgba(244,168,192,0.95)', '#ffffff'],
     cheetah:   [null, INK, '#e04838', '#f8b830'],
     hawkeye:   [null, INK, '#f8f8f0', '#3870c0'],
     fortress:  [null, INK, '#e04838', '#a8a8a0'],
@@ -165,8 +166,17 @@
     wanderer:  [null, INK, '#f8f8f0', '#9068d8'],
   };
   const SPRITES = {
-    // default: the resident ghost — non-invasive by nature (it floats, it fades)
-    ghost: ['0000111111110000','0001333333331000','0013333333333100','0133333333333310','0133113333113310','0133113333113310','0133113333113310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133133113313310','0131031001301310','0110011001100110'],
+    // default: the resident ghost — 24x24 fine-pixel, translucent, floats
+    ghost: [
+      '000000000000000000000000','000000000000000000000000','000000000000000000000000',
+      '000000001111111100000000','000000113333333311000000','000001333333333333100000',
+      '000013333333333333310000','000013333333333333310000','000133333333333333331000',
+      '000133351133335113331000','000133311133331113331000','000133311133331113331000',
+      '000133311133331113321000','000133333333333333321000','000134433333333334421000',
+      '000133333331133333321000','000133333333333333321000','000133333333333333321000',
+      '000133333333333333321000','000133333333333333321000','000133331133331133321000',
+      '000013310013310013310000','000001100001100001100000','000000000000000000000000',
+    ],
     cheetah: ['0110000000000110','1331000000001331','1333100000013331','1323310000133231','1333331111333331','1333333333333331','1332333333332331','1311333333311331','1311333333311331','1333333223333331','1233331111333321','1333333113333331','0133333333333310','0013333223333100','0001333333331000','0000111111110000'],
     hawkeye: ['0000011111100000','0000133333310000','0001333333331000','0013333333331000','0013333113331000','0133333123331000','0133333333331110','0133333333333221','0133333333331110','0133333333331000','0013333333331000','0013233333310000','0001223333100000','0000122331000000','0000011110000000','0000000000000000'],
     fortress: ['0110011001100110','0110011001100110','0111111111111110','0133333333333310','0133333333333310','0133113333113310','0133113333113310','0133333333333310','0132323232323310','0133333333333310','0133331111333310','0133331331333310','0133331221333310','0133331221333310','0133331221333310','0111111111111110'],
@@ -175,7 +185,7 @@
     wanderer: ['0000111111110000','0001333333331000','0013333333333100','0133333333333310','0131133331133310','0131133331133310','0133333333333310','0133233333233310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133133113313310','0131031001301310','0110011001100110'],
   };
   // eye rows per species (outline pixels inside the face) for blinking
-  const EYES = { ghost: [4, 6], cheetah: [7, 8], hawkeye: [4, 5], fortress: [5, 6], commander: [6, 6], balanced: [9, 10], wanderer: [4, 5] };
+  const EYES = { ghost: [9, 12], cheetah: [7, 8], hawkeye: [4, 5], fortress: [5, 6], commander: [6, 6], balanced: [9, 10], wanderer: [4, 5] };
   const FLOATERS = new Set(['ghost', 'wanderer']);   // these hover instead of hopping
 
   const canvas = document.getElementById('petCanvas');
@@ -190,25 +200,28 @@
 
   function drawSprite(grid, pal, dy, blink, sy = 1) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const ox = (canvas.width - 16 * S) / 2;
-    const base = (canvas.height + 16 * S) / 2;       // bottom edge (anchor squash here)
+    const N = grid.length;                            // 16 for archetypes, 24 for the ghost
+    const PS = N > 16 ? 4 : S;                        // pixel size adapts to grid resolution
+    const ox = (canvas.width - N * PS) / 2;
+    const base = (canvas.height + N * PS) / 2;        // bottom edge (anchor squash here)
     const [er0, er1] = EYES[species] || [6, 7];
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const xin0 = Math.round(N * 0.2), xin1 = Math.round(N * 0.8);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       let v = +grid[y][x];
       if (!v) continue;
-      if (blink && v === 1 && y >= er0 && y <= er1 && x >= 3 && x <= 12) v = 3;
-      const h = S * sy;
-      const shear = leanDir * ((15 - y) / 15) * S * 1.6;  // lean into motion, top leads
-      ctx.fillStyle = pal[v];
-      ctx.fillRect(ox + x * S + shear, base - (16 - y) * h + dy, S, h + 0.5);
+      if (blink && (v === 1 || v === 5) && y >= er0 && y <= er1 && x >= xin0 && x <= xin1) v = 3;
+      const h = PS * sy;
+      const shear = leanDir * ((N - 1 - y) / (N - 1)) * PS * 1.8;  // lean into motion, top leads
+      ctx.fillStyle = pal[v] || pal[1];
+      ctx.fillRect(ox + x * PS + shear, base - (N - y) * h + dy, PS, h + 0.5);
     }
     // faint motion trail while flying
     if (leanDir) {
       ctx.fillStyle = 'rgba(48,40,72,0.25)';
-      const ty = base - 8 * S + dy;
-      for (let i = 1; i <= 3; i++) ctx.fillRect(ox + (leanDir > 0 ? -i * 6 : 16 * S + i * 6 - S), ty + i * 4, S, S);
+      const ty = base - N * PS / 2 + dy;
+      for (let i = 1; i <= 3; i++) ctx.fillRect(ox + (leanDir > 0 ? -i * 6 : N * PS + i * 6 - PS), ty + i * 4, PS, PS);
     }
-    return { ox, top: base - 16 * S * sy + dy };
+    return { ox, top: base - N * PS * sy + dy };
   }
 
   /* mood decorations, drawn in the canvas margins */
@@ -351,8 +364,16 @@
   }
   canvas.addEventListener('mouseenter', showRing);
   ring.addEventListener('mouseenter', showRing);
-  document.addEventListener('mouseleave', () => hideRing(150));
+  ring.addEventListener('mouseleave', () => hideRing(300));
+  document.addEventListener('mouseleave', () => hideRing(100));
   canvas.addEventListener('mouseleave', () => hideRing(600));
+  window.addEventListener('blur', () => hideRing(0));
+  // watchdog: no cursor movement over the window for a while -> fold the ring
+  let lastMove = Date.now();
+  document.addEventListener('mousemove', () => { lastMove = Date.now(); });
+  setInterval(() => {
+    if (ring.classList.contains('show') && Date.now() - lastMove > 2500) ring.classList.remove('show');
+  }, 800);
 
   document.getElementById('rbDash').addEventListener('click', () => {
     invoke('open_dashboard').catch(() => {});
@@ -372,14 +393,18 @@
   let docked = false, peeked = false, homePos = null, sliding = false;
 
   function drawTabIcon() {   // 1px-scale mini sprite on the hanging sign
-    const tc = document.getElementById('tabIcon').getContext('2d');
-    tc.clearRect(0, 0, 16, 16);
+    const el = document.getElementById('tabIcon');
     const grid = SPRITES[species] || SPRITES.ghost;
     const pal = PAL[species] || PAL.ghost;
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const N = grid.length;
+    el.width = N; el.height = N;
+    el.style.width = '16px'; el.style.height = '16px';
+    const tc = el.getContext('2d');
+    tc.clearRect(0, 0, N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const v = +grid[y][x];
       if (!v) continue;
-      tc.fillStyle = pal[v];
+      tc.fillStyle = pal[v] || pal[1];
       tc.fillRect(x, y, 1, 1);
     }
   }
@@ -393,20 +418,22 @@
       x: pos.x / sf, y: pos.y / sf, sf,
     };
   }
-  async function slideTo(tx, ty, steps = 7) {
-    if (sliding || !win) return;
+  const LPos = TW?.dpi?.LogicalPosition || TW?.window?.LogicalPosition || null;
+  async function slideTo(tx, ty, steps = 16) {
+    if (sliding || !win || !LPos) return;
     sliding = true;
     try {
       const g = await geo();
       leanDir = Math.sign(tx - g.x);                 // ghost leans into the flight
       for (let i = 1; i <= steps; i++) {
-        const x = g.x + (tx - g.x) * i / steps;
-        const y = g.y + (ty - g.y) * i / steps;
-        await win.setPosition(new TW.dpi.LogicalPosition(x, y));
-        await new Promise(r => setTimeout(r, 22));
+        const t = 1 - Math.pow(1 - i / steps, 3);    // ease-out cubic — a glide, not a jump
+        const x = g.x + (tx - g.x) * t;
+        const y = g.y + (ty - g.y) * t;
+        await win.setPosition(new LPos(x, y));
+        await new Promise(r => setTimeout(r, 18));
       }
     } catch (e) {}
-    setTimeout(() => { leanDir = 0; }, 120);
+    setTimeout(() => { leanDir = 0; }, 150);
     sliding = false;
   }
   async function dockEdge(manual = false) {
@@ -414,6 +441,7 @@
     try {
       const g = await geo();
       homePos = { x: g.x, y: g.y };
+      ring.classList.remove('show');               // never let the ring cover the sign
       await slideTo(g.monX + g.monW - 26, g.y);
       docked = true; peeked = false;
       drawTabIcon();
