@@ -196,12 +196,26 @@ fn get_profile() -> Option<serde_json::Value> {
     serde_json::from_slice(&bytes).ok()
 }
 
+/// Flow mode: hide the pet entirely for `hours`, then bring it back.
+/// The collector keeps running — guarding, not watching.
+#[tauri::command]
+fn focus_mode(app: tauri::AppHandle, hours: f64) {
+    if let Some(w) = app.get_webview_window("pet") {
+        w.hide().ok();
+        std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_secs_f64(hours * 3600.0));
+            w.show().ok();
+        });
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_state,
             import_profile,
             get_profile,
+            focus_mode,
             report::get_report,
             report::annotate_gap,
             report::open_dashboard
@@ -221,9 +235,10 @@ fn main() {
             }
 
             let show = MenuItem::with_id(app, "show", "显示 / 隐藏宠物", true, None::<&str>)?;
-            let dash = MenuItem::with_id(app, "dash", "今日报告 (Pro)", true, None::<&str>)?;
+            let flow = MenuItem::with_id(app, "flow", "心流模式（隐藏 2 小时）", true, None::<&str>)?;
+            let dash = MenuItem::with_id(app, "dash", "今日报告", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "退出 AttentionOS", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &dash, &quit])?;
+            let menu = Menu::with_items(app, &[&show, &flow, &dash, &quit])?;
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
@@ -234,6 +249,7 @@ fn main() {
                             if w.is_visible().unwrap_or(false) { w.hide().ok(); } else { w.show().ok(); }
                         }
                     }
+                    "flow" => focus_mode(app.clone(), 2.0),
                     "dash" => {
                         if let Some(w) = app.get_webview_window("dashboard") {
                             w.show().ok();

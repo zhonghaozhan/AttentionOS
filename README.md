@@ -40,8 +40,8 @@ Fan et al. 2002），全程实时评分、连击、音效、过关结算：
 | 档位 | 形态 | 状态 |
 |---|---|---|
 | **AttentionOS mini** | 60s 浏览器体检（本页 demo） | ✅ 可玩 |
-| **AttentionOS** | 桌宠 + 本地采集器 + 每日结算卡 | 🛠 骨架可跑（[desktop/](desktop/)） |
-| **AttentionOS Pro** | Dashboard + 进程归因 + 周报 + MCP server + Focus Shield | 📋 设计中 |
+| **AttentionOS** | 桌宠 + GUI Dashboard + 本地采集器（[desktop/](desktop/)） | 🛠 可跑：六物种、边缘挂靠、心流隐身、25min 休息邀请、五指标报告 |
+| **AttentionOS Pro** | CLI + MCP server + agent skill + ASCII 宠物（`attn pet`） | 🛠 CLI 可用，MCP 设计中 |
 
 测完点「复制存档码」→ 桌宠端双击宠物粘贴导入，你的类型就是它的物种。
 

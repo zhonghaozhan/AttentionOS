@@ -8,6 +8,7 @@ Usage:
   attn.py demo               seed the database with a synthetic workday
   attn.py collect [secs]     start the macOS collector (polls frontmost app)
   attn.py report [YYYY-MM-DD]  render the attention report
+  attn.py pet                one-line ASCII pet reflecting your last 30 min
   attn.py wipe               delete all local data
 """
 import datetime
@@ -266,6 +267,34 @@ def report(date):
           f"data local at {DIM}{DB_PATH}{RESET}\n")
 
 
+# ---------------------------------------------------------------- pet
+def pet():
+    """One-line ASCII pet — the Pro-tier mascot. Same mood engine as the
+    desktop pet, terminal-native and non-invasive (prints once and exits;
+    wire it into your shell prompt or statusline if you want it living)."""
+    now = time.time()
+    conn = db()
+    rows = conn.execute(
+        "SELECT source, start, end FROM focus_events WHERE end >= ? ORDER BY start",
+        (now - 1800,)).fetchall()
+    switches = sum(1 for i in range(1, len(rows)) if rows[i][0] != rows[i - 1][0])
+    tracked = sum(min(e, now) - max(s, now - 1800) for _, s, e in rows) / 60
+    rate = switches * 60 / tracked if tracked > 1 else 0
+    events = load_events(datetime.date.today())
+    blocks = focus_blocks(events) if events else []
+    in_block = any(now - e < 120 for _, s, e in blocks)
+
+    if tracked < 2:
+        face, word = "(=∪ ω ∪=) zZ", "睡着了 · 你不在，我也歇会儿"
+    elif rate > 25:
+        face, word = "(=> д <=)!!", f"被切碎了 · {rate:.0f} 次/小时的切换"
+    elif in_block and rate < 8:
+        face, word = "(=๑ ˃̵ᴗ˂̵=) ✧", "心流中 · 我不吵你"
+    else:
+        face, word = "(=˘ ᴗ ˘=)", f"平静 · 切换 {rate:.0f}/hr"
+    print(f"{BOLD}{face}{RESET}  {DIM}{word}{RESET}")
+
+
 # ---------------------------------------------------------------- main
 def main(argv):
     cmd = argv[1] if len(argv) > 1 else "report"
@@ -277,6 +306,8 @@ def main(argv):
         date = (datetime.date.fromisoformat(argv[2]) if len(argv) > 2
                 else datetime.date.today())
         report(date)
+    elif cmd == "pet":
+        pet()
     elif cmd == "wipe":
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
