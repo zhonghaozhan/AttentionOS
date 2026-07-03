@@ -90,6 +90,7 @@
     transform: scale(1.12);
   }
   .ring-btn:active { transform: scale(0.95); }
+  .ring-ico { width: 16px; height: 16px; image-rendering: pixelated; }
   #bubble {
     background: rgba(255, 255, 255, 0.94);
     border: 1px solid rgba(48, 40, 72, 0.22);
@@ -144,10 +145,10 @@
   <div id="dockTab" title="AttentionOS — BRB"><canvas id="tabIcon" width="16" height="16"></canvas><span>BRB</span></div>
   <div id="ring">
     <!-- arc around the pet: 210° / 250° / 290° / 330° on a 62px radius -->
-    <div class="ring-btn" id="rbDash"  style="left:20px;  top:141px" title="今日报告">▦</div>
-    <div class="ring-btn" id="rbFlow"  style="left:53px;  top:112px" title="心流模式 2h">☾</div>
-    <div class="ring-btn" id="rbCard"  style="left:95px;  top:112px" title="状态卡 / 领养">❐</div>
-    <div class="ring-btn" id="rbDock"  style="left:128px; top:141px" title="挂到屏幕边缘">⇥</div>
+    <div class="ring-btn" id="rbDash"  style="left:20px;  top:141px" title="今日报告"><canvas class="ring-ico" data-ico="menu"    width="12" height="12"></canvas></div>
+    <div class="ring-btn" id="rbFlow"  style="left:53px;  top:112px" title="心流模式 2h"><canvas class="ring-ico" data-ico="moon"    width="12" height="12"></canvas></div>
+    <div class="ring-btn" id="rbCard"  style="left:95px;  top:112px" title="领养 / 换宠物"><canvas class="ring-ico" data-ico="persona" width="12" height="12"></canvas></div>
+    <div class="ring-btn" id="rbDock"  style="left:128px; top:141px" title="挂到屏幕边缘"><canvas class="ring-ico" data-ico="dock"    width="12" height="12"></canvas></div>
   </div>
 
   <div id="panel">
@@ -266,7 +267,25 @@
     }
   }
 
-  let sick = false; // recovery-debt thermal throttling (Pro)
+  /* pixel glyphs for the ring buttons — crisp 12x12, drawn once */
+  const ICONS = {
+    menu: ['000000000000','000000000000','011111111110','011111111110','000000000000','011111111110','011111111110','000000000000','011111111110','011111111110','000000000000','000000000000'],
+    moon: ['000000000000','000111110000','001110000000','011100000000','011000000000','011000000000','011000000000','011100000000','001110000000','000111110000','000000000000','000000000000'],
+    persona: ['000011110000','000111111000','000111111000','000111111000','000011110000','000000000000','001111111100','011111111110','011111111110','011111111110','000000000000','000000000000'],
+    dock: ['000000000110','000000000110','000001000110','000001100110','011111110110','011111110110','000001100110','000001000110','000000000110','000000000110','000000000000','000000000000'],
+  };
+  document.querySelectorAll('.ring-ico').forEach(el => {
+    const grid = ICONS[el.dataset.ico];
+    const c = el.getContext('2d');
+    c.fillStyle = '#302848';
+    for (let y = 0; y < 12; y++) for (let x = 0; x < 12; x++)
+      if (grid[y][x] === '1') c.fillRect(x, y, 1, 1);
+  });
+
+  let sick = false;      // recovery-debt thermal throttling (Pro)
+  let grabbed = 0;       // timestamp while the user is holding/dragging the pet
+  let danceEnd = 0;      // frame until which the break choreography runs
+  function breakDance() { danceEnd = frame + 26; }
   function tick() {
     frame++;
     const pal = PAL[species] || PAL.balanced;
@@ -297,7 +316,19 @@
       sy += Math.sin(frame / 10) * 0.015;                   // breathing
     }
     if (FLOATERS.has(species) && (m === 'focused' || m === 'frazzled')) dy -= 3; // never grounded
+    // grabbed: squash, wide eyes, nervous little sway while being carried
+    if (grabbed) {
+      if (Date.now() - grabbed > 3000) { grabbed = 0; leanDir = 0; }
+      else { sy = 0.9; blink = false; dy = -2; leanDir = Math.sin(frame / 1.5) * 0.5; }
+    } else if (frame < danceEnd) {
+      // break-time choreography: designed to catch the eye, not to shout
+      const ph = 26 - (danceEnd - frame);
+      if (ph < 8) { dy = -Math.abs(Math.sin(ph / 7 * Math.PI * 2)) * 11; sy = 1.06; }
+      else if (ph < 20) { leanDir = Math.sin((ph - 8) / 2) * 0.9; dy = -2; }
+      else leanDir = 0;
+    }
     const { ox, top } = drawSprite(grid, pal, dy, blink, sy);
+    if (frame < danceEnd && danceEnd - frame <= 6) fxSparkle(ox, top);   // finale sparkles
     if (m === 'sleeping') fxSleep(ox, top);
     else if (m === 'focused') fxSparkle(ox, top);
     else if (m === 'sick') fxSweat(ox, top);
@@ -489,8 +520,13 @@
   document.addEventListener('mouseleave', () => {
     if (docked && peeked && !panel.classList.contains('show')) setTimeout(peekBack, 1800);
   });
-  // clicking the pet while peeked = pull it out for good
-  canvas.addEventListener('pointerdown', () => { if (docked && peeked) { docked = false; peeked = false; dockTab.classList.remove('show'); } });
+  // clicking the pet while peeked = pull it out for good; holding it = grabbed animation
+  canvas.addEventListener('pointerdown', () => {
+    if (docked && peeked) { docked = false; peeked = false; dockTab.classList.remove('show'); }
+    grabbed = Date.now();
+  });
+  document.addEventListener('pointerup', () => { grabbed = 0; leanDir = 0; });
+  window.addEventListener('blur', () => { setTimeout(() => { grabbed = 0; leanDir = 0; }, 400); });
   document.getElementById('rbDock').addEventListener('click', () => {
     hideRing(0);
     dockEdge(true);
@@ -514,6 +550,7 @@
     if (workSec >= BREAK_MIN * 60 && !breakInvited) {                // healthy distraction, on schedule
       breakInvited = true;
       if (docked) peekOut();
+      breakDance();                                                  // catch the eye by design, not by shouting
       say(`连续 ${BREAK_MIN} 分钟了——站起来伸个腰？点我一下重新计时`, 9000);
     }
   }, 10000);
