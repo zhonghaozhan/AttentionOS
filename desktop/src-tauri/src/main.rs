@@ -123,6 +123,38 @@ struct PetState {
     longest_block_min: f64,
     tracked_min: f64,      // last 30 min actually tracked
     current_app: String,
+    agents_waiting: u32,   // coding-agent sessions currently blocked on the user
+    agent_wait_secs: f64,  // the longest of those waits
+}
+
+/// Agents currently stopped and waiting on the human (fed by Claude Code
+/// hooks via `attn agent-event`, see docs/AGENTS.md).
+fn agent_waits(conn: &Connection) -> (u32, f64) {
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS agent_events (
+           session TEXT NOT NULL, state TEXT NOT NULL, ts REAL NOT NULL)",
+        [],
+    )
+    .ok();
+    let now = now_ts();
+    let mut stmt = conn
+        .prepare("SELECT session, state, ts FROM agent_events WHERE ts >= ?1 ORDER BY ts")
+        .unwrap();
+    let rows: Vec<(String, String, f64)> = stmt
+        .query_map([now - 1800.0], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .filter_map(|r| r.ok())
+        .collect();
+    let mut last: std::collections::HashMap<String, (String, f64)> = Default::default();
+    for (s, st, ts) in rows {
+        last.insert(s, (st, ts));
+    }
+    let waits: Vec<f64> = last
+        .values()
+        .filter(|(st, _)| st == "waiting")
+        .map(|(_, ts)| now - ts)
+        .collect();
+    (waits.len() as u32, waits.iter().cloned().fold(0.0, f64::max))
 }
 
 /// Merge raw events into focus blocks (simplified METRICS.md §1).
@@ -197,6 +229,8 @@ fn get_state() -> PetState {
         "calm"
     };
 
+    let (agents_waiting, agent_wait_secs) = agent_waits(&conn);
+
     PetState {
         mood: mood.into(),
         switches_per_hr: (switches_per_hr * 10.0).round() / 10.0,
@@ -204,6 +238,8 @@ fn get_state() -> PetState {
         longest_block_min: longest.round(),
         tracked_min: tracked.round(),
         current_app: recent.last().map(|(s, _, _)| s.clone()).unwrap_or_default(),
+        agents_waiting,
+        agent_wait_secs: agent_wait_secs.round(),
     }
 }
 

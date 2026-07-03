@@ -338,6 +338,17 @@
       ctx.fillRect(bx, by + 2.6 * S, S, S);
     }
   }
+  function fxHourglass(ox, top) {       // an agent is waiting on you
+    const hx = ox - 4 * S, hy = top + 2 * S;
+    const flip = frame % 16 < 8;        // sand up / sand down
+    const P = (x, y, c) => { ctx.fillStyle = c; ctx.fillRect(hx + x * 3, hy + y * 3, 3, 3); };
+    for (let x = 0; x < 5; x++) { P(x, 0, INK); P(x, 6, INK); }
+    P(0, 1, INK); P(4, 1, INK); P(1, 2, INK); P(3, 2, INK); P(2, 3, INK);
+    P(1, 4, INK); P(3, 4, INK); P(0, 5, INK); P(4, 5, INK);
+    const sand = '#f8b830';
+    if (flip) { P(1, 1, sand); P(2, 1, sand); P(3, 1, sand); P(2, 2, sand); }
+    else { P(2, 4, sand); P(1, 5, sand); P(2, 5, sand); P(3, 5, sand); }
+  }
 
   /* pixel glyphs for the ring buttons — crisp 12x12, drawn once */
   const ICONS = {
@@ -358,6 +369,7 @@
   let grabbed = 0;       // timestamp while the user is holding/dragging the pet
   let danceEnd = 0;      // frame until which the break choreography runs
   let quietUntil = 0;    // "知道了" — acknowledged, suppress the fuss for a while
+  let agentWaiting = false, agentWaitSec = 0, agentAckUntil = 0, lastAgentNudge = 0;
   function breakDance() { danceEnd = frame + 26; }
   function tick() {
     frame++;
@@ -411,6 +423,7 @@
     else if (m === 'focused') fxSparkle(ox, top);
     else if (m === 'sick') fxSweat(ox, top);
     else if (m === 'frazzled' && burst) fxBang(ox, top);
+    if (agentWaiting && Date.now() > agentAckUntil && m !== 'sleeping') fxHourglass(ox, top);
     // visibility follows engagement: full presence while you interact,
     // fading toward the desktop when left alone — unless it has something to say
     const ghosty = FLOATERS.has(species) ? 0.12 : 0;
@@ -418,7 +431,8 @@
     const engaged = grabbed || Date.now() - lastMove < 8000
       || panel.classList.contains('show') || ring.classList.contains('show')
       || bubble.classList.contains('show') || breakInvited || frame < danceEnd
-      || m === 'frazzled' || m === 'sick';
+      || m === 'frazzled' || m === 'sick'
+      || (agentWaiting && Date.now() > agentAckUntil);   // a waiting agent is worth seeing
     if (!engaged) op *= 0.5;
     canvas.style.transition = engaged ? 'opacity 0.25s' : 'opacity 1.8s ease';
     canvas.style.opacity = op;
@@ -444,6 +458,21 @@
         lastMood = s.mood;
         if (s.mood === 'frazzled') say('切换太多了，我头晕…');
         else if (s.mood === 'focused') say('嘘——心流中');
+      }
+      // agent-wait messenger: the one interruption worth making —
+      // but never inside your flow unless the agent has waited 10min+
+      agentWaitSec = s.agent_wait_secs || 0;
+      agentWaiting = (s.agents_waiting || 0) > 0 && agentWaitSec > 120;
+      if (agentWaiting && Date.now() > agentAckUntil) {
+        const protectFlow = s.mood === 'focused' && agentWaitSec < 600;
+        if (!protectFlow && Date.now() - lastAgentNudge > 5 * 60 * 1000) {
+          lastAgentNudge = Date.now();
+          if (docked) peekOut();
+          breakDance();
+          const n = s.agents_waiting;
+          say(n > 1 ? `${n} 个 agent 在等你，最久 ${Math.round(agentWaitSec / 60)} 分钟了`
+                    : `Claude 等你 ${Math.round(agentWaitSec / 60)} 分钟了——去看看？`, 8000);
+        }
       }
     } catch (e) { /* backend not ready yet */ }
   }
@@ -672,6 +701,9 @@
     if (breakInvited) {
       breakInvited = false; workSec = 0;
       say('好，重新计时。去吧。', 2000);
+    } else if (agentWaiting && Date.now() > agentAckUntil) {
+      agentAckUntil = Date.now() + 5 * 60 * 1000;
+      say('知道了，这就去。', 1800);
     } else if (mood === 'frazzled' && Date.now() >= quietUntil) {
       quietUntil = Date.now() + 10 * 60 * 1000;
       say('知道了，我安静 10 分钟。', 2200);
