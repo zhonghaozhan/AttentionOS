@@ -163,7 +163,7 @@ fn get_state() -> PetState {
     let midnight = now - (now % 86400.0); // UTC-approx; fine for a mood
 
     let mut stmt = conn
-        .prepare("SELECT source, start, end FROM focus_events WHERE end >= ?1 ORDER BY start")
+        .prepare("SELECT source, start, end FROM focus_events WHERE end >= ?1 AND lower(source) != 'attentionos' ORDER BY start")
         .unwrap();
     let day_events: Vec<(String, f64, f64)> = stmt
         .query_map([midnight], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))

@@ -45,8 +45,9 @@ fn tz_offset_secs() -> f64 {
 }
 
 fn load_events(conn: &Connection, d0: f64, d1: f64) -> Vec<(String, f64, f64)> {
+    // the observer never counts itself
     let mut stmt = conn
-        .prepare("SELECT source, start, end FROM focus_events WHERE start >= ?1 AND start < ?2 AND end - start > 1 ORDER BY start")
+        .prepare("SELECT source, start, end FROM focus_events WHERE start >= ?1 AND start < ?2 AND end - start > 1 AND lower(source) != 'attentionos' ORDER BY start")
         .unwrap();
     stmt.query_map([d0, d1], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
         .unwrap()

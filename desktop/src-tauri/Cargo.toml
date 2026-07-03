@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "AttentionOS desktop pet — local-first attention observability"
 edition = "2021"
 
+[[bin]]
+name = "AttentionOS"
+path = "src/main.rs"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

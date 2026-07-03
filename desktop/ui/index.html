@@ -464,8 +464,9 @@
   }
   const LPos = TW?.dpi?.LogicalPosition || TW?.window?.LogicalPosition || null;
   async function slideTo(tx, ty, steps = 16) {
-    if (sliding || !win || !LPos) return;
+    if (sliding || !win || !LPos) return false;      // caller must not change state on skip
     sliding = true;
+    let ok = true;
     try {
       const g = await geo();
       leanDir = Math.sign(tx - g.x);                 // ghost leans into the flight
@@ -476,9 +477,10 @@
         await win.setPosition(new LPos(x, y));
         await new Promise(r => setTimeout(r, 18));
       }
-    } catch (e) {}
+    } catch (e) { ok = false; }
     setTimeout(() => { leanDir = 0; }, 150);
     sliding = false;
+    return ok;
   }
   async function dockEdge(manual = false) {
     if (!win || docked) return;
@@ -486,7 +488,8 @@
       const g = await geo();
       homePos = { x: g.x, y: g.y };
       ring.classList.remove('show');               // never let the ring cover the sign
-      await slideTo(g.monX + g.monW - 26, g.y);
+      const ok = await slideTo(g.monX + g.monW - 26, g.y);
+      if (!ok) return;
       docked = true; peeked = false;
       drawTabIcon();
       dockTab.classList.add('show');
@@ -494,31 +497,40 @@
     } catch (e) {}
   }
   async function undock() {
-    if (!win || !docked) return;
+    if (!win || !docked || sliding) return;
     try {
       const g = await geo();
-      await slideTo(homePos ? homePos.x : g.monX + g.monW - 200, homePos ? homePos.y : g.y);
+      const ok = await slideTo(homePos ? homePos.x : g.monX + g.monW - 200, homePos ? homePos.y : g.y);
+      if (!ok) return;
       docked = false; peeked = false;
       dockTab.classList.remove('show');
     } catch (e) {}
   }
-  async function peekOut() {          // hover: slide out but stay logically docked
-    if (!win || !docked || peeked) return;
-    peeked = true;
+  async function peekOut() {          // slide out but stay logically docked
+    if (!win || !docked || peeked || sliding) return;
     dockTab.classList.remove('show');
     const g = await geo();
-    await slideTo(g.monX + g.monW - 190, g.y);
+    const ok = await slideTo(g.monX + g.monW - 190, g.y);
+    if (ok) peeked = true;                       // state follows reality, never precedes it
+    else dockTab.classList.add('show');
   }
   async function peekBack() {
-    if (!win || !docked || !peeked) return;
+    if (!win || !docked || !peeked || sliding) return;
     const g = await geo();
-    await slideTo(g.monX + g.monW - 24, g.y);
-    peeked = false;
-    dockTab.classList.add('show');
+    const ok = await slideTo(g.monX + g.monW - 26, g.y);
+    if (ok) { peeked = false; dockTab.classList.add('show'); }
   }
-  document.addEventListener('mouseenter', () => { if (docked && !peeked) peekOut(); });
+  // the sign itself is the only reveal trigger — hovering the window's
+  // invisible regions must not yank the pet out
+  let backTimer = null;
+  dockTab.addEventListener('mouseenter', peekOut);
+  dockTab.addEventListener('click', peekOut);
+  document.addEventListener('mouseenter', () => clearTimeout(backTimer));
   document.addEventListener('mouseleave', () => {
-    if (docked && peeked && !panel.classList.contains('show')) setTimeout(peekBack, 1800);
+    if (docked && peeked && !panel.classList.contains('show')) {
+      clearTimeout(backTimer);
+      backTimer = setTimeout(peekBack, 1500);
+    }
   });
   // clicking the pet while peeked = pull it out for good; holding it = grabbed animation
   canvas.addEventListener('pointerdown', () => {
