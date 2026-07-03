@@ -39,9 +39,10 @@
   #bubble.show { display: block; }
   #panel {
     position: fixed; inset: 0;
-    background: #f8f8f0;
+    background: #fff;
     border: 3px solid #302848;
-    padding: 10px;
+    box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px #302848;
+    padding: 12px;
     display: none;
     flex-direction: column;
     gap: 6px;
@@ -49,7 +50,11 @@
     color: #302848;
   }
   #panel.show { display: flex; }
-  #panel h3 { font-size: 11px; }
+  #panel h3 {
+    font-size: 10px; letter-spacing: 1px;
+    background: #e04838; color: #fff;
+    padding: 2px 6px; align-self: flex-start;
+  }
   #panel .row { display: flex; justify-content: space-between; }
   #panel input {
     width: 100%; font-family: inherit; font-size: 9px;
@@ -66,7 +71,7 @@
 </head>
 <body>
   <div id="bubble"></div>
-  <canvas id="petCanvas" width="96" height="96" data-tauri-drag-region></canvas>
+  <canvas id="petCanvas" width="120" height="120" data-tauri-drag-region></canvas>
 
   <div id="panel">
     <h3 id="pTitle">AttentionOS</h3>
@@ -82,54 +87,82 @@
   </div>
 
 <script type="module">
-  const invoke = window.__TAURI__.core.invoke;
+  // guarded so the page also renders in a plain browser (preview/QA mode)
+  const invoke = window.__TAURI__?.core?.invoke
+    ?? (async () => { throw new Error('not in tauri'); });
 
-  /* ---- sprites: palette-indexed 16x16 (0 transparent, 1 outline, 2 accent, 3 body) ---- */
+  /* ---- species sprites: 16x16, '0' transparent '1' outline '2' accent '3' body ---- */
+  const INK = '#302848';
   const PAL = {
-    fortress:  [null, '#302848', '#e04838', '#a8a8a0'],
-    cheetah:   [null, '#302848', '#e04838', '#f8b830'],
-    hawkeye:   [null, '#302848', '#f8f8f0', '#3870c0'],
-    commander: [null, '#302848', '#f8b830', '#e04838'],
-    balanced:  [null, '#302848', '#f8f8f0', '#48d068'],
-    wanderer:  [null, '#302848', '#f8f8f0', '#9068d8'],
+    cheetah:   [null, INK, '#e04838', '#f8b830'],
+    hawkeye:   [null, INK, '#f8f8f0', '#3870c0'],
+    fortress:  [null, INK, '#e04838', '#a8a8a0'],
+    commander: [null, INK, '#f8b830', '#e04838'],
+    balanced:  [null, INK, '#f8f8f0', '#48d068'],
+    wanderer:  [null, INK, '#f8f8f0', '#9068d8'],
   };
-  // balanced slime — default pet before any profile import
-  const SLIME = [
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
-    [0,0,0,0,1,1,3,3,3,3,1,1,0,0,0,0],
-    [0,0,0,1,3,3,3,3,3,3,3,3,1,0,0,0],
-    [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
-    [0,0,1,3,3,1,1,3,3,1,1,3,3,1,0,0],
-    [0,1,3,3,3,1,1,3,3,1,1,3,3,3,1,0],
-    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
-    [0,1,3,3,3,3,3,2,2,3,3,3,3,3,1,0],
-    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
-    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
-    [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
-    [0,0,0,1,1,3,3,3,3,3,3,1,1,0,0,0],
-    [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
-    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  ];
+  const SPRITES = {
+    cheetah: ['0110000000000110','1331000000001331','1333100000013331','1323310000133231','1333331111333331','1333333333333331','1332333333332331','1311333333311331','1311333333311331','1333333223333331','1233331111333321','1333333113333331','0133333333333310','0013333223333100','0001333333331000','0000111111110000'],
+    hawkeye: ['0000011111100000','0000133333310000','0001333333331000','0013333333331000','0013333113331000','0133333123331000','0133333333331110','0133333333333221','0133333333331110','0133333333331000','0013333333331000','0013233333310000','0001223333100000','0000122331000000','0000011110000000','0000000000000000'],
+    fortress: ['0110011001100110','0110011001100110','0111111111111110','0133333333333310','0133333333333310','0133113333113310','0133113333113310','0133333333333310','0132323232323310','0133333333333310','0133331111333310','0133331331333310','0133331221333310','0133331221333310','0133331221333310','0111111111111110'],
+    commander: ['0000100110010000','0000100110010000','0000111111110000','0001333333331000','0013333333333100','0013333333333100','0013111111113100','0013333333333100','0013332332333100','0013333333333100','0013333333333100','0001333333331000','0000111111110000','0000000000000000','0011222222221100','0111111111111110'],
+    balanced: ['0111111111111110','0122222223333310','0111111111111110','0000000000000000','0000011111100000','0000133333310000','0001333333331000','0013333333333100','0133333333333310','0133113333113310','0133333113333310','0133333333333310','0133333333333310','0122333333332210','0011222222221100','0001111111111000'],
+    wanderer: ['0000111111110000','0001333333331000','0013333333333100','0133333333333310','0131133331133310','0131133331133310','0133333333333310','0133233333233310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133333333333310','0133133113313310','0131031001301310','0110011001100110'],
+  };
+  // eye rows per species (outline pixels inside the face) for blinking
+  const EYES = { cheetah: [7, 8], hawkeye: [4, 5], fortress: [5, 6], commander: [6, 6], balanced: [9, 10], wanderer: [4, 5] };
 
   const canvas = document.getElementById('petCanvas');
   const ctx = canvas.getContext('2d');
+  const S = 5; // pixel scale
   let species = 'balanced';
   let mood = 'calm';
   let frame = 0;
 
-  function drawSprite(grid, pal, scale, dy = 0, blink = false) {
+  function px(x, y, color, n = 1) { ctx.fillStyle = color; ctx.fillRect(x, y, S * n, S); }
+
+  function drawSprite(grid, pal, dy, blink, sy = 1) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const ox = (canvas.width - 16 * scale) / 2;
-    const oy = (canvas.height - 16 * scale) / 2 + dy;
+    const ox = (canvas.width - 16 * S) / 2;
+    const base = (canvas.height + 16 * S) / 2;       // bottom edge (anchor squash here)
+    const [er0, er1] = EYES[species] || [6, 7];
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      let v = grid[y][x];
+      let v = +grid[y][x];
       if (!v) continue;
-      // crude blink: eye rows (1-indexed cells that are outline inside face) -> body when blinking
-      if (blink && v === 1 && y >= 6 && y <= 7 && x >= 4 && x <= 11) v = 3;
+      if (blink && v === 1 && y >= er0 && y <= er1 && x >= 3 && x <= 12) v = 3;
+      const h = S * sy;
       ctx.fillStyle = pal[v];
-      ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
+      ctx.fillRect(ox + x * S, base - (16 - y) * h + dy, S, h + 0.5);
+    }
+    return { ox, top: base - 16 * S * sy + dy };
+  }
+
+  /* mood decorations, drawn in the canvas margins */
+  function fxSleep(ox, top) {           // rising Z Z
+    const t = frame % 20;
+    ctx.fillStyle = INK;
+    const zx = ox + 15 * S, zy = top - 2 - t;
+    if (t < 16) { px(zx, zy, INK, 2); px(zx + S, zy + S, INK); px(zx, zy + 2 * S, INK, 2); }
+  }
+  function fxSparkle(ox, top) {         // flow-state stars
+    const spots = [[-3, 4], [17, 2], [-2, 12]];
+    spots.forEach(([gx, gy], i) => {
+      if ((frame + i * 4) % 12 < 6) {
+        const cx = ox + gx * S, cy = top + gy * S;
+        px(cx, cy - S, '#f8b830'); px(cx - S, cy, '#f8b830'); px(cx + S, cy, '#f8b830'); px(cx, cy + S, '#f8b830'); px(cx, cy, '#fff');
+      }
+    });
+  }
+  function fxSweat(ox, top) {           // sick sweat drop sliding down
+    const t = (frame % 16) / 16;
+    px(ox + 14 * S, top + 2 * S + t * 3 * S, '#3870c0');
+  }
+  function fxBang(ox, top) {            // frazzled "!"
+    if (frame % 8 < 5) {
+      const bx = ox + 7.5 * S, by = top - 4 * S;
+      ctx.fillStyle = '#e04838';
+      ctx.fillRect(bx, by, S, 2 * S);
+      ctx.fillRect(bx, by + 2.6 * S, S, S);
     }
   }
 
@@ -137,14 +170,33 @@
   function tick() {
     frame++;
     const pal = PAL[species] || PAL.balanced;
-    let dy = 0, blink = false;
+    const grid = SPRITES[species] || SPRITES.balanced;
+    let dy = 0, blink = false, sy = 1;
     const m = (sick && mood !== 'sleeping') ? 'sick' : mood;
-    if (m === 'focused') dy = -Math.abs(Math.sin(frame / 4)) * 6;            // happy bounce
-    else if (m === 'frazzled') dy = (frame % 2 ? 1 : -1) * 2;                // jitter
-    else if (m === 'sleeping') { dy = 2; blink = true; }                     // eyes closed
-    else if (m === 'sick') { dy = 4; blink = frame % 10 < 5; }               // droop, heavy lids
-    else blink = frame % 24 < 2;                                            // idle blink
-    drawSprite(SLIME, pal, 5, dy, blink);
+    if (m === 'focused') {                                  // flow: joyful bounce w/ squash-stretch
+      const b = Math.abs(Math.sin(frame / 4));
+      dy = -b * 7;
+      sy = 1 + (b - 0.5) * 0.1;
+    } else if (m === 'frazzled') {
+      dy = (frame % 2 ? 1 : -1) * 2;
+    } else if (m === 'sleeping') {
+      dy = 2; blink = true;
+      sy = 1 + Math.sin(frame / 8) * 0.02;                  // slow breathing
+    } else if (m === 'sick') {
+      dy = 4; blink = frame % 10 < 5; sy = 0.96;            // droop
+    } else {                                                // calm: idle blink + occasional hop
+      blink = frame % 24 < 2;
+      const h = frame % 68;
+      if (h < 3) sy = 0.9;                                  // wind-up squash
+      else if (h < 8) { dy = -Math.sin((h - 3) / 5 * Math.PI) * 9; sy = 1.06; }
+      else if (h < 10) sy = 0.94;                           // landing squash
+      sy += Math.sin(frame / 10) * 0.015;                   // breathing
+    }
+    const { ox, top } = drawSprite(grid, pal, dy, blink, sy);
+    if (m === 'sleeping') fxSleep(ox, top);
+    else if (m === 'focused') fxSparkle(ox, top);
+    else if (m === 'sick') fxSweat(ox, top);
+    else if (m === 'frazzled') fxBang(ox, top);
   }
   setInterval(tick, 140);
 
@@ -209,6 +261,11 @@
     panel.classList.remove('show');
   });
   invoke('get_profile').then(p => { if (p && p.type) species = p.type; }).catch(() => {});
+
+  // preview/QA hooks: ?species=cheetah&mood=focused
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('species')) species = qs.get('species');
+  if (qs.get('mood')) { mood = qs.get('mood'); setInterval(() => { mood = qs.get('mood'); }, 5000); }
 </script>
 </body>
 </html>
