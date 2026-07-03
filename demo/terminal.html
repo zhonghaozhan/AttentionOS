@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ATTENTION-OS — 60秒注意力体检 · TERMINAL</title>
+<title>ATTENTION-OS — 60秒注意力体检 · TERMINAL ARCADE</title>
 <meta name="description" content="基于神经科学三大注意力网络的60秒测试。3关小游戏，实时判定，生成你的注意力角色卡。数据不出浏览器。">
 <meta property="og:title" content="60秒，测出你的注意力属性">
 <meta property="og:description" content="警觉 · 定向 · 执行 —— 3关小游戏，通关生成你的注意力角色卡。数据不出浏览器。">
@@ -80,12 +80,18 @@
   }
   @media (min-width: 900px) { .sheet { padding-top: 40px; } }
 
-  /* ---- terminal panel: 1px frame + title tab breaking the border ---- */
+  /* ---- pixel window: notched 4px border via box-shadow + hard slab shadow ----
+     (technique inherited from the retired pixel.html) */
   .win {
     position: relative;
     background: var(--panel);
-    border: 1px solid var(--line);
-    margin: 18px 0;
+    margin: 24px 14px 28px 6px;
+    box-shadow:
+      0 -4px 0 0 var(--line),
+      0 4px 0 0 var(--line),
+      -4px 0 0 0 var(--line),
+      4px 0 0 0 var(--line),
+      8px 8px 0 0 #000;
   }
   .tab {
     position: absolute;
@@ -105,10 +111,15 @@
     justify-content: space-between;
     align-items: center;
     background: var(--panel);
-    border: 1px solid var(--line);
     padding: 8px 12px;
-    margin-bottom: 22px;
+    margin: 6px 14px 26px 6px;
     font-size: var(--fs-s);
+    box-shadow:
+      0 -4px 0 0 var(--line),
+      0 4px 0 0 var(--line),
+      -4px 0 0 0 var(--line),
+      4px 0 0 0 var(--line),
+      6px 6px 0 0 #000;
   }
   .masthead .brand { letter-spacing: 1px; }
   .masthead .brand .p { color: var(--ok); }
@@ -170,10 +181,11 @@
   }
   .hero-kicker::before { content: "// "; }
   h1 {
-    font-size: var(--fs-xl);
-    font-weight: 700;
-    line-height: 1.5;
-    margin-top: 10px;
+    font-family: var(--px);
+    font-size: clamp(15px, 4.6vw, 21px);
+    font-weight: 400;
+    line-height: 1.9;
+    margin-top: 12px;
     text-transform: uppercase;
   }
   h1 .accent { color: var(--acc); }
@@ -203,20 +215,23 @@
     flex-wrap: wrap;
   }
   .btn {
-    font-family: inherit;
-    font-size: var(--fs-m);
+    font-family: var(--px);
+    font-size: 10px;
+    line-height: 1.7;
     text-transform: uppercase;
     letter-spacing: 1px;
-    background: none;
+    background: var(--panel);
     color: var(--acc);
     border: 1px solid var(--acc);
-    padding: 11px 16px;
+    padding: 12px 16px;
     cursor: pointer;
     touch-action: manipulation;
+    box-shadow: 4px 4px 0 0 #000;
   }
   .btn::before { content: "[ "; opacity: 0.55; }
   .btn::after { content: " ]"; opacity: 0.55; }
   .btn:hover, .btn:active { background: var(--acc); color: var(--bg); }  /* inverse video */
+  .btn:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 0 #000; }
   .btn.ghost { color: var(--text); border-color: var(--line); }
   .btn.ghost:hover, .btn.ghost:active { background: var(--text); color: var(--bg); }
   .fine { font-size: var(--fs-xs); color: var(--dim); line-height: 1.9; max-width: 34ch; }
@@ -261,16 +276,46 @@
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  #hudStage { color: var(--text); }
+  #hudStage { color: var(--text); font-family: var(--px); font-size: 9px; }
   .dots { display: flex; gap: 6px; }
   .dot { width: 9px; height: 9px; border: 1px solid var(--dk); }
   .dot.done { background: var(--acc); border-color: var(--acc); }
   .streak {
     color: var(--acc);
+    font-family: var(--px);
+    font-size: 9px;
+    display: inline-block;
+    transform-origin: center;
     opacity: 0;
-    transition: opacity 0.2s steps(2, end);
+    transition: opacity 0.2s steps(2, end), transform 0.15s steps(2, end);
   }
   .streak.show { opacity: 1; }
+  .snd {
+    font-family: var(--px);
+    font-size: 8px;
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--dim);
+    padding: 4px 6px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    touch-action: manipulation;
+  }
+  .snd.on { color: var(--acc); border-color: var(--acc); }
+  /* arcade screen shake: transform-only, on the game root */
+  .shake-s { animation: shakegood 0.08s steps(2, end); }
+  @keyframes shakegood {
+    0% { transform: translate(2px, -2px); }
+    50% { transform: translate(-2px, 2px); }
+    100% { transform: translate(0, 0); }
+  }
+  .shake-c { animation: shakecrit 0.12s steps(3, end); }
+  @keyframes shakecrit {
+    0% { transform: translate(4px, -4px); }
+    33% { transform: translate(-4px, 4px); }
+    66% { transform: translate(4px, 2px); }
+    100% { transform: translate(0, 0); }
+  }
 
   #arena {
     position: absolute;
@@ -286,7 +331,12 @@
     width: fit-content;
     margin: 0 auto;
     background: var(--panel);
-    border: 1px solid var(--line);
+    box-shadow:
+      0 -4px 0 0 var(--line),
+      0 4px 0 0 var(--line),
+      -4px 0 0 0 var(--line),
+      4px 0 0 0 var(--line),
+      5px 5px 0 0 #000;
     color: var(--text);
     padding: 9px 14px;
     font-size: var(--fs-s);
@@ -320,9 +370,10 @@
     text-transform: uppercase;
   }
   .stage-card h2 {
-    font-size: var(--fs-l);
-    font-weight: 700;
-    line-height: 1.6;
+    font-family: var(--px);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.9;
     margin: 12px 0 8px;
     text-transform: uppercase;
   }
@@ -335,7 +386,12 @@
     width: min(56vw, 230px);
     aspect-ratio: 1;
     background: var(--panel);
-    border: 1px solid var(--line);
+    box-shadow:
+      0 -4px 0 0 var(--line),
+      0 4px 0 0 var(--line),
+      -4px 0 0 0 var(--line),
+      4px 0 0 0 var(--line),
+      8px 8px 0 0 #000;
     display: grid;
     place-items: center;
     font-size: var(--fs-m);
@@ -345,10 +401,15 @@
   }
   .signal-ring.go {
     background: var(--acc);
-    border-color: var(--acc);
+    box-shadow:
+      0 -4px 0 0 var(--acc),
+      0 4px 0 0 var(--acc),
+      -4px 0 0 0 var(--acc),
+      4px 0 0 0 var(--acc),
+      8px 8px 0 0 #000;
     color: var(--bg);
-    font-weight: 700;
-    font-size: calc(var(--fs-xl) + 4px);
+    font-family: var(--px);
+    font-size: var(--fs-xl);
     animation: sigpop 0.15s steps(2, end);
   }
   @keyframes sigpop { from { transform: scale(0.6); } to { transform: scale(1); } }
@@ -369,16 +430,16 @@
     width: clamp(54px, 16vw, 80px);
     aspect-ratio: 1;
     background: var(--panel);
-    border: 1px solid var(--line);
+    box-shadow: inset 0 0 0 3px var(--line);
     color: var(--text);
     display: grid;
     place-items: center;
     font-size: clamp(18px, 6vw, 26px);
     cursor: pointer;
   }
-  .search-cell:active { border-color: var(--acc); color: var(--acc); }
+  .search-cell:active { box-shadow: inset 0 0 0 3px var(--acc); color: var(--acc); }
   .search-cell.wrong {
-    border-color: var(--err);
+    box-shadow: inset 0 0 0 3px var(--err);
     color: var(--err);
     animation: shake 0.3s steps(4, end);
   }
@@ -399,14 +460,14 @@
     height: 96px;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    border-top: 1px solid var(--line);
+    border-top: 4px solid var(--line);
   }
   .lr-buttons button {
     font-family: var(--mono);
     font-size: 34px;
     background: var(--panel);
     border: none;
-    border-right: 1px solid var(--line);
+    border-right: 4px solid var(--line);
     cursor: pointer;
     color: var(--text);
     touch-action: manipulation;
@@ -433,7 +494,12 @@
   }
   .stamp {
     background: var(--panel);
-    border: 1px solid var(--line);
+    box-shadow:
+      0 -4px 0 0 var(--line),
+      0 4px 0 0 var(--line),
+      -4px 0 0 0 var(--line),
+      4px 0 0 0 var(--line),
+      8px 8px 0 0 #000;
     padding: 24px 34px 26px;
     text-align: center;
     margin: 0;
@@ -444,7 +510,7 @@
     to { transform: scale(1); opacity: 1; }
   }
   .stamp .s-title { font-size: var(--fs-xs); letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
-  .stamp .s-clear { font-size: var(--fs-l); margin-top: 10px; letter-spacing: 2px; text-transform: uppercase; }
+  .stamp .s-clear { font-family: var(--px); font-size: 12px; line-height: 1.8; margin-top: 10px; letter-spacing: 2px; text-transform: uppercase; }
   /* the one sanctioned glow: big accent score */
   .stamp .s-score {
     font-family: var(--px);
@@ -472,10 +538,11 @@
   }
   .verdict-label::before { content: "// "; }
   .verdict {
-    font-size: var(--fs-xl);
-    font-weight: 700;
-    line-height: 1.4;
-    margin-top: 6px;
+    font-family: var(--px);
+    font-size: clamp(14px, 4.2vw, 18px);
+    font-weight: 400;
+    line-height: 1.8;
+    margin-top: 8px;
     color: var(--acc);
     text-transform: uppercase;
   }
@@ -487,7 +554,7 @@
   .hp-label { font-size: var(--fs-xs); width: 7ch; flex: none; color: var(--dim); text-transform: uppercase; }
   .bbar { flex: 1; color: var(--dk); overflow: hidden; white-space: nowrap; letter-spacing: 0; }
   .bbar b { font-weight: 400; }
-  .hp-num { font-size: var(--fs-m); min-width: 3ch; text-align: right; font-weight: 700; }
+  .hp-num { font-family: var(--px); font-size: 12px; min-width: 3ch; text-align: right; }
   .n0 b, .hp-num.n0 { color: var(--acc); }   /* alerting */
   .n1 b, .hp-num.n1 { color: var(--cyn); }   /* orienting */
   .n2 b, .hp-num.n2 { color: var(--ok); }    /* executive */
@@ -496,7 +563,7 @@
   .net-row { padding: 13px 2px; border-bottom: 1px dashed var(--line); }
   .net-row:last-child { border-bottom: none; }
   .net-top { display: flex; justify-content: space-between; align-items: baseline; }
-  .net-top .nm { font-size: var(--fs-m); text-transform: uppercase; }
+  .net-top .nm { font-family: var(--px); font-size: 10px; text-transform: uppercase; }
   .net-top .nm small { color: var(--dim); font-size: var(--fs-xs); margin-left: 6px; }
   .net-top .sc { font-family: var(--px); font-size: 18px; }
   .sc.n0 { color: var(--acc); text-shadow: 0 0 8px rgba(255, 140, 66, 0.35); }
@@ -612,6 +679,7 @@
     <span id="hudStage"></span>
     <span class="streak" id="streak"></span>
     <span class="dots" id="dots"></span>
+    <button class="snd" id="sndBtn" type="button">SND:ON</button>
   </div>
   <div id="arena"></div>
   <div class="feedback" id="feedback"></div>
@@ -669,7 +737,7 @@
 <canvas id="cardCanvas" width="1080" height="1440" style="display:none"></canvas>
 
 <div class="style-nav">
-  <a href="index.html">editorial</a> · <a href="modern.html">modern</a> · <a href="pixel.html">gameboy</a> · <a href="terminal.html" class="on">terminal</a> · <a href="gbc.html">handheld</a>
+  <a href="gbc.html">handheld</a> · <a href="terminal.html">terminal</a>
 </div>
 
 <script>
@@ -833,6 +901,59 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
 
+  /* ================= sound: web audio chiptune (no assets) ================= */
+  let sndOn = true;
+  try { sndOn = localStorage.getItem('attn_snd') !== 'off'; } catch {}
+  let AC = null;
+  function ac() {
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch {} }
+    if (AC && AC.state === 'suspended') AC.resume().catch(() => {});
+    return AC;
+  }
+  /* square-wave blip with exponential-decay envelope; `when` = start offset (s) */
+  function beep(freq, dur = 0.06, type = 'square', vol = 0.05, when = 0) {
+    if (!sndOn) return;
+    const ctx = ac();
+    if (!ctx) return;
+    try {
+      const t0 = ctx.currentTime + when;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(vol, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch {}
+  }
+  const SND = {
+    good: () => beep(880, 0.06),
+    crit: () => { beep(880, 0.05); beep(1318, 0.05, 'square', 0.05, 0.05); },
+    bad: () => beep(150, 0.12, 'sawtooth'),
+    falseStart: () => { beep(220, 0.07, 'sawtooth'); beep(220, 0.07, 'sawtooth', 0.05, 0.1); },
+    clear: () => [659, 880, 1318].forEach((f, i) => beep(f, 0.09, 'square', 0.05, i * 0.09)),
+    combo: () => { beep(1568, 0.05); beep(1568, 0.05, 'square', 0.05, 0.07); },
+    tick: () => beep(1046, 0.035, 'square', 0.035),
+    fanfare: () => [659, 784, 880, 1318].forEach((f, i) => beep(f, 0.09, 'square', 0.05, i * 0.1)),
+  };
+  /* warm the context up inside a real user gesture */
+  document.addEventListener('pointerdown', () => { if (sndOn) ac(); }, { once: true, capture: true });
+  const sndBtn = $('sndBtn');
+  function paintSnd() {
+    sndBtn.textContent = sndOn ? 'SND:ON' : 'SND:OFF';
+    sndBtn.classList.toggle('on', sndOn);
+  }
+  sndBtn.addEventListener('pointerdown', e => e.stopPropagation());
+  sndBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    sndOn = !sndOn;
+    try { localStorage.setItem('attn_snd', sndOn ? 'on' : 'off'); } catch {}
+    paintSnd();
+    if (sndOn) { ac(); SND.good(); }
+    sndBtn.blur();   // keep Space from re-clicking mid-stage
+  });
+  paintSnd();
+
   /* ================= fx: character particles ================= */
   const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const CAN_ANIMATE = typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
@@ -878,6 +999,48 @@
       { textShadow: '0 0 14px rgba(255, 140, 66, 0.85)' },
       { textShadow: '0 0 0 rgba(255, 140, 66, 0)' },
     ], { duration: 150, easing: 'ease-out' });
+  }
+  /* hit-stop: ~50ms freeze before feedback pops (arcade impact) */
+  const hitStop = () => sleep(REDUCED_MOTION ? 0 : 50);
+  /* screen shake on the game root: 2px on good hits, 4px on crits */
+  function screenShake(crit) {
+    if (REDUCED_MOTION) return;
+    const g = $('game');
+    g.classList.remove('shake-s', 'shake-c');
+    void g.offsetWidth;
+    g.classList.add(crit ? 'shake-c' : 'shake-s');
+  }
+  /* floating damage numbers: ms value rises 36px and fades */
+  function damageNum(el, text, crit) {
+    if (REDUCED_MOTION || !CAN_ANIMATE || !el || fxLive >= FX_CAP) return;
+    const r = el.getBoundingClientRect();
+    const s = document.createElement('span');
+    s.textContent = text;
+    s.style.cssText = `position:absolute;left:${(r.left + r.width / 2).toFixed(0)}px;top:${(r.top + r.height * 0.3).toFixed(0)}px;` +
+      `font-family:var(--px);font-size:${crit ? 16 : 11}px;line-height:1;white-space:nowrap;` +
+      (crit ? 'color:var(--acc);text-shadow:0 0 10px rgba(255,140,66,0.75);' : 'color:var(--ok);');
+    fxLayer.appendChild(s);
+    fxLive++;
+    const anim = s.animate([
+      { transform: 'translate(-50%, 0)', opacity: 1 },
+      { transform: 'translate(-50%, -36px)', opacity: 0 },
+    ], { duration: 500, easing: 'cubic-bezier(0.2, 0.7, 0.4, 1)' });
+    const kill = () => { s.remove(); fxLive = Math.max(0, fxLive - 1); };
+    anim.onfinish = kill;
+    anim.oncancel = kill;
+  }
+  /* combo milestone: inset accent pulse on the viewport edge */
+  function comboPulse() {
+    if (REDUCED_MOTION || !CAN_ANIMATE) return;
+    const edge = document.createElement('div');
+    edge.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:997;';
+    document.body.appendChild(edge);
+    const anim = edge.animate([
+      { boxShadow: 'inset 0 0 0 6px rgba(255, 140, 66, 0.7)' },
+      { boxShadow: 'inset 0 0 0 1px rgba(255, 140, 66, 0)' },
+    ], { duration: 450, easing: 'ease-out' });
+    anim.onfinish = () => edge.remove();
+    anim.oncancel = () => edge.remove();
   }
 
   /* ================= archetype sprites (16x16, palette indices) =================
@@ -1013,7 +1176,7 @@
 
   function applyLang() {
     document.documentElement.lang = lang;
-    document.title = lang === 'zh' ? 'ATTENTION-OS — 60秒注意力体检 · TERMINAL' : 'ATTENTION-OS — 60S ATTENTION CHECK-UP · TERMINAL';
+    document.title = lang === 'zh' ? 'ATTENTION-OS — 60秒注意力体检 · TERMINAL ARCADE' : 'ATTENTION-OS — 60S ATTENTION CHECK-UP · TERMINAL ARCADE';
     $('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     $('heroTitle').innerHTML = t('title');
@@ -1066,8 +1229,17 @@
     const el = $('streak');
     if (streakN >= 2) {
       el.textContent = `${t('streakWord')} ×${streakN}`;
+      /* combo escalation: tag grows with the streak */
+      el.style.transform = REDUCED_MOTION ? '' : `scale(${(1 + 0.06 * Math.min(streakN, 6)).toFixed(2)})`;
       el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-    } else el.classList.remove('show');
+      if (streakN === 3 || streakN === 5 || streakN === 8) {
+        SND.combo();
+        comboPulse();
+      }
+    } else {
+      el.classList.remove('show');
+      el.style.transform = '';
+    }
   }
   function gradeOf(table, rt) {
     for (const [max, label] of table) if (rt < max) return label;
@@ -1101,6 +1273,7 @@
       <div class="s-line">${line}</div></div>`;
     $('game').appendChild(el);
     buzz([20, 40, 20]);
+    SND.clear();
     await sleep(1500);
     el.remove();
   }
@@ -1131,6 +1304,7 @@
             data.s1false++;
             clearTimeout(timer);
             ring.classList.add('shake');
+            SND.falseStart();
             feedback(errLine(t('falseStart')), false);
             bumpStreak(false);
             setTimeout(() => {
@@ -1151,10 +1325,17 @@
       });
       data.s1.push(rt);
       const good = rt < 450;
+      const crit = rt < 250;                   // CRITICAL grade
+      if (good) await hitStop();
       bumpStreak(good);
-      if (good) burst(ring);
+      if (good) {
+        burst(ring);
+        screenShake(crit);
+        damageNum(ring, `${Math.round(rt)}ms`, crit);
+        (crit ? SND.crit : SND.good)();
+      } else SND.bad();
       feedback(logLine(good, `${Math.round(rt)}ms`, gradeOf(t('s1grades'), rt)), good);
-      if (rt < 250) critPulse();               // CRITICAL grade
+      if (crit) critPulse();
       hud(0, i + 1, TRIALS);
       await sleep(750);
     }
@@ -1187,6 +1368,7 @@
             else {
               wrongThis++; data.s2wrong++;
               cell.classList.add('wrong');
+              SND.bad();
               buzz(30);
             }
           });
@@ -1194,10 +1376,18 @@
       });
       data.s2.push(rt + wrongThis * 300);   // wrong taps cost
       const good = rt < 2400 && wrongThis === 0;
+      const crit = good && rt < 1000;       // CRITICAL grade
+      if (good) await hitStop();
       bumpStreak(good);
-      if (good) burst(arena.querySelector(`.search-cell[data-k="${target}"]`));
+      if (good) {
+        const cell = arena.querySelector(`.search-cell[data-k="${target}"]`);
+        burst(cell);
+        screenShake(crit);
+        damageNum(cell, `${(rt / 1000).toFixed(2)}s`, crit);
+        (crit ? SND.crit : SND.good)();
+      } else SND.bad();
       feedback(logLine(good, `${(rt / 1000).toFixed(2)}s`, gradeOf(t('s2grades'), rt)), good);
-      if (good && rt < 1000) critPulse();   // CRITICAL grade
+      if (crit) critPulse();
       hud(1, i + 1, TRIALS);
       await sleep(750);
     }
@@ -1250,11 +1440,16 @@
       const rt = performance.now() - t0;
       const correct = ans === dir;
       data.s3.push({ incong, rt: ans ? rt : 1600, correct });
+      if (correct) await hitStop();
       bumpStreak(correct);
-      if (!ans) feedback(errLine(t('s3miss')), false);
-      else if (!correct) feedback(errLine(t('s3bad')), false);
+      if (!ans) { SND.bad(); feedback(errLine(t('s3miss')), false); }
+      else if (!correct) { SND.bad(); feedback(errLine(t('s3bad')), false); }
       else {
-        burst(arena.querySelector('.arrows'));
+        const arrows = arena.querySelector('.arrows');
+        burst(arrows);
+        screenShake(incong);
+        damageNum(arrows, `${Math.round(rt)}ms`, incong);
+        (incong ? SND.crit : SND.good)();
         feedback(logLine(true, `${Math.round(rt)}ms`, incong ? t('s3okHard') : t('s3ok')), true);
         if (incong) critPulse();              // incongruent-correct = top tier
       }
@@ -1356,6 +1551,44 @@
     ].map(x => `<li><span>${x}</span></li>`).join('');
     applyLangStatics();
   }
+  /* orchestrated results reveal: sprite pop -> bars fill (staggered ticks)
+     -> rank stamps -> archetype name + fanfare. Total ~2.2s. Mock/lang-toggle
+     re-renders skip this and stay instant. */
+  function revealResults() {
+    if (REDUCED_MOTION || !CAN_ANIMATE) { setTimeout(SND.fanfare, 100); return; }
+    const pop = (el, delay, frames, opts = {}) => {
+      if (el) el.animate(frames, Object.assign({ duration: 300, delay, easing: 'steps(4, end)', fill: 'backwards' }, opts));
+    };
+    // 1) sprite pops in
+    pop($('spriteCanvas'), 0, [
+      { transform: 'scale(0)', opacity: 0 },
+      { transform: 'scale(1)', opacity: 1 },
+    ]);
+    setTimeout(SND.good, 30);
+    // 2) bracket-bars fill sequentially, one tick each
+    document.querySelectorAll('#radarBox .bbar b').forEach((b, i) => {
+      pop(b, 350 + i * 250, [
+        { clipPath: 'inset(0 100% 0 0)' },
+        { clipPath: 'inset(0 0 0 0)' },
+      ], { duration: 350, easing: 'steps(10, end)' });
+      setTimeout(SND.tick, 350 + i * 250);
+    });
+    // 3) RANK lines stamp in
+    document.querySelectorAll('#networks .net-rank').forEach((el, i) => {
+      pop(el, 1350 + i * 100, [
+        { transform: 'scale(1.4)', opacity: 0 },
+        { transform: 'scale(1)', opacity: 1 },
+      ], { duration: 200, easing: 'steps(3, end)' });
+    });
+    // 4) archetype name lands last
+    pop($('archetype'), 1800, [
+      { transform: 'scale(1.3)', opacity: 0 },
+      { transform: 'scale(1)', opacity: 1 },
+    ], { duration: 250, easing: 'steps(3, end)' });
+    pop($('archetypeTag'), 2000, [{ opacity: 0 }, { opacity: 1 }], { duration: 250 });
+    setTimeout(SND.fanfare, 1800);
+  }
+
   function applyLangStatics() {
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     $('downloadBtn').textContent = t('dl');
@@ -1487,6 +1720,7 @@
     analysis = analyze();
     renderResults(analysis);
     show('results');
+    revealResults();
   }
   $('startBtn').addEventListener('click', run);
   $('retryBtn').addEventListener('click', run);

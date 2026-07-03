@@ -237,7 +237,7 @@
     color: var(--ink);
     padding: 3px 8px;
     opacity: 0;
-    transition: opacity 0.2s steps(2, end);
+    transition: opacity 0.2s steps(2, end), transform 0.15s steps(2, end);
   }
   .streak.show { opacity: 1; }
 
@@ -593,6 +593,44 @@
     animation: fbpop 0.8s steps(6, end), goldflash 0.15s steps(2, end);
   }
 
+  /* ---------- juice: screen shake, combo pulse, sound toggle ---------- */
+  .hitshake { animation: hitshake 0.1s steps(2, end); }
+  @keyframes hitshake {
+    50% { transform: translate(2px, -2px); }
+  }
+  .hitshake-big { animation: hitshakeBig 0.16s steps(3, end); }
+  @keyframes hitshakeBig {
+    33% { transform: translate(4px, -3px) rotate(0.3deg); }
+    66% { transform: translate(-4px, 3px) rotate(-0.3deg); }
+  }
+  #edgePulse {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 6px var(--gold);
+    opacity: 0;
+  }
+  #edgePulse.pulse { animation: edgepulse 0.45s steps(3, end); }
+  @keyframes edgepulse { 0% { opacity: 1; } 100% { opacity: 0; } }
+  .streak.wobble { animation: chipwob 0.25s steps(2, end); }
+  @keyframes chipwob {
+    25% { transform: scale(1.35) rotate(-4deg); }
+    75% { transform: scale(1.25) rotate(4deg); }
+  }
+  .snd-toggle {
+    font-family: inherit;
+    font-size: var(--fs-xs);
+    background: transparent;
+    color: var(--white);
+    border: 2px solid var(--muted);
+    padding: 3px 8px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .snd-toggle:active { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
@@ -622,7 +660,7 @@
       <span data-i18n="footProto"></span>
     </div>
     <div class="style-nav">
-      <a href="index.html">editorial</a> · <a href="modern.html">modern</a> · <a href="pixel.html">gameboy</a> · <a href="terminal.html">terminal</a> · <a href="gbc.html">handheld</a>
+      <a href="gbc.html">handheld</a> · <a href="terminal.html">terminal</a>
     </div>
   </div>
 </section>
@@ -632,6 +670,7 @@
   <div class="game-hud">
     <span id="hudStage"></span>
     <span class="streak" id="streak"></span>
+    <button class="snd-toggle" id="sndBtn" type="button">SND ON</button>
     <span class="dots" id="dots"></span>
   </div>
   <div id="arena"></div>
@@ -688,7 +727,7 @@
       <span>github.com/zhonghaozhan/AttentionOS</span>
     </div>
     <div class="style-nav">
-      <a href="index.html">editorial</a> · <a href="modern.html">modern</a> · <a href="pixel.html">gameboy</a> · <a href="terminal.html">terminal</a> · <a href="gbc.html">handheld</a>
+      <a href="gbc.html">handheld</a> · <a href="terminal.html">terminal</a>
     </div>
   </div>
 </section>
@@ -857,6 +896,74 @@
   };
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch {} };
+
+  /* ================= sound: Web Audio chiptune blips (no assets) =================
+     AudioContext is created lazily on first user gesture; every beep is a square
+     (or sawtooth) oscillator through a gain node with an exponential-decay
+     envelope. Governed ONLY by the mute toggle, never by reduced-motion. */
+  const SND = (() => {
+    let ctx = null;
+    let on = true;
+    try { on = localStorage.getItem('attn_snd') !== 'off'; } catch {}
+    const ensure = () => {
+      try {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      } catch {}
+      return ctx;
+    };
+    function beep(freq, dur, type = 'square', vol = 0.05, delay = 0) {
+      if (!on) return;
+      const c = ensure();
+      if (!c) return;
+      try {
+        const t0 = c.currentTime + delay;
+        const o = c.createOscillator(), g = c.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(vol, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur / 1000);
+        o.connect(g).connect(c.destination);
+        o.start(t0);
+        o.stop(t0 + dur / 1000 + 0.02);
+      } catch {}
+    }
+    return {
+      beep,
+      unlock: ensure,
+      get on() { return on; },
+      toggle() {
+        on = !on;
+        try { localStorage.setItem('attn_snd', on ? 'on' : 'off'); } catch {}
+        return on;
+      },
+      good() { beep(880, 60); },                                   // clean blip
+      top() { beep(880, 55); beep(1318, 90, 'square', 0.05, 0.06); }, // rising two-note
+      bad() { beep(150, 120, 'sawtooth'); },                       // wrong answer
+      falseStart() { beep(220, 70); beep(220, 70, 'square', 0.05, 0.11); }, // double buzz
+      clear() {                                                    // stage-clear jingle
+        beep(659, 90); beep(880, 90, 'square', 0.05, 0.1); beep(1318, 180, 'square', 0.05, 0.2);
+      },
+      combo() { beep(1568, 45); beep(1568, 70, 'square', 0.05, 0.07); }, // double coin
+      fanfare() {                                                  // results reveal
+        [523, 659, 784, 1046].forEach((f, i) => beep(f, i === 3 ? 220 : 90, 'square', 0.05, i * 0.1));
+      },
+      tick() { beep(2400, 12, 'square', 0.012); },                 // typewriter (subtle)
+      thud() { beep(110, 90, 'square', 0.07); },                   // rank stamp
+    };
+  })();
+  const unlockAudio = () => { SND.unlock(); };
+  document.addEventListener('pointerdown', unlockAudio, { once: true });
+  document.addEventListener('keydown', unlockAudio, { once: true });
+  const sndBtn = $('sndBtn');
+  const sndLabel = () => { sndBtn.textContent = `SND ${SND.on ? 'ON' : 'OFF'}`; };
+  sndBtn.addEventListener('click', () => {
+    SND.toggle();
+    sndLabel();
+    sndBtn.blur(); // keep Space from re-toggling during play
+    if (SND.on) { SND.unlock(); SND.good(); }
+  });
+  sndLabel();
 
   /* ================= archetype sprites (16x16, palette indices) =================
      0 = transparent · 1 = outline (navy, shared) · 2 = secondary accent · 3 = primary body */
@@ -1087,13 +1194,82 @@
       anim.oncancel = () => p.remove();
     }
   }
+
+  /* ---------- juice: hit-stop, screen shake, damage numbers, shockwave ---------- */
+  const hitStop = () => REDUCED_MOTION ? Promise.resolve() : sleep(50); // impact pause
+  function shakeGame(big) {
+    if (REDUCED_MOTION) return;
+    const g = screens.game;
+    g.classList.remove('hitshake', 'hitshake-big');
+    void g.offsetWidth;
+    g.classList.add(big ? 'hitshake-big' : 'hitshake');
+  }
+  function floatNum(el, text, topTier) {
+    if (REDUCED_MOTION || !el || !el.isConnected) return;
+    if (fxLayer.childElementCount >= FX_MAX) return;
+    const r = el.getBoundingClientRect();
+    const s = document.createElement('span');
+    s.textContent = text;
+    s.style.cssText = `position:absolute;left:${r.left + r.width / 2}px;top:${r.top + r.height * 0.25}px;` +
+      `font-family:"Press Start 2P",monospace;white-space:nowrap;pointer-events:none;` +
+      (topTier
+        ? `font-size:18px;color:var(--gold);text-shadow:2px 0 0 var(--ink),-2px 0 0 var(--ink),0 2px 0 var(--ink),0 -2px 0 var(--ink),2px 2px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink);`
+        : `font-size:12px;color:var(--ink);text-shadow:1px 1px 0 var(--paper);`);
+    fxLayer.appendChild(s);
+    const a = s.animate(
+      [
+        { transform: 'translate(-50%, 0)', opacity: 1 },
+        { transform: 'translate(-50%, -36px)', opacity: 0 },
+      ],
+      { duration: 500, easing: 'steps(6, end)', fill: 'forwards' }
+    );
+    a.onfinish = () => s.remove();
+    a.oncancel = () => s.remove();
+  }
+  function shockwave(el, color) {
+    if (REDUCED_MOTION || !el || !el.isConnected) return;
+    if (fxLayer.childElementCount >= FX_MAX) return;
+    const r = el.getBoundingClientRect();
+    const d = document.createElement('div');
+    d.style.cssText = `position:absolute;left:${r.left}px;top:${r.top}px;width:${r.width}px;` +
+      `height:${r.height}px;border:4px solid ${color};pointer-events:none;`;
+    fxLayer.appendChild(d);
+    const a = d.animate(
+      [
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(1.6)', opacity: 0 },
+      ],
+      { duration: 350, easing: 'steps(5, end)', fill: 'forwards' }
+    );
+    a.onfinish = () => d.remove();
+    a.oncancel = () => d.remove();
+  }
+  const edgePulse = document.createElement('div');
+  edgePulse.id = 'edgePulse';
+  document.body.appendChild(edgePulse);
+  function comboEdge() {
+    if (REDUCED_MOTION) return;
+    edgePulse.classList.remove('pulse');
+    void edgePulse.offsetWidth;
+    edgePulse.classList.add('pulse');
+  }
+
   function bumpStreak(good) {
     streakN = good ? streakN + 1 : 0;
     const el = $('streak');
     if (streakN >= 2) {
       el.textContent = `${t('streakWord')} ×${streakN}`;
-      el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-    } else el.classList.remove('show');
+      el.style.transform = `scale(${(1 + 0.06 * Math.min(streakN, 6)).toFixed(2)})`;
+      el.classList.remove('show', 'wobble'); void el.offsetWidth; el.classList.add('show');
+      if (streakN === 3 || streakN === 5 || streakN === 8) { // milestone!
+        if (!REDUCED_MOTION) el.classList.add('wobble');
+        comboEdge();
+        SND.combo();
+      }
+    } else {
+      el.classList.remove('show', 'wobble');
+      el.style.transform = '';
+    }
   }
   function gradeOf(table, rt) {
     for (const [max, label] of table) if (rt < max) return label;
@@ -1106,6 +1282,8 @@
         <div class="dlg-typed"><h2>${h}</h2><p>${p}</p></div>
         <button class="btn" id="stageGo">▶ ${t('press')}</button>
         <span class="cont-arrow">▼</span></div>`;
+      // quiet typewriter ticks paced to the .dlg-typed clip animation (24 steps / 0.9s)
+      for (let i = 0; i < 8; i++) setTimeout(() => SND.tick(), 60 + i * 112);
       const onSpace = e => {
         if (e.code !== 'Space' || e.repeat) return;
         e.preventDefault();
@@ -1130,6 +1308,7 @@
       <div class="s-line">${line}</div></div>`;
     $('game').appendChild(el);
     buzz([20, 40, 20]);
+    SND.clear();
     await sleep(1500);
     el.remove();
   }
@@ -1151,6 +1330,7 @@
           fired = true;
           ring.classList.add('go');
           ring.textContent = t('go');
+          shockwave(ring, '#e04838');
           t0 = performance.now();
         }
         function onTap(e) {
@@ -1160,6 +1340,7 @@
             data.s1false++;
             clearTimeout(timer);
             ring.classList.add('shake');
+            SND.falseStart();
             feedback(t('falseStart'), false);
             bumpStreak(false);
             setTimeout(() => {
@@ -1180,9 +1361,16 @@
       });
       data.s1.push(rt);
       const good = rt < 450;
+      const top = rt < 250;
+      if (good) {
+        await hitStop();               // impact pause before the pop
+        if (top) SND.top(); else SND.good();
+        shakeGame(top);
+        burst(ring, FX.s1);
+        floatNum(ring, `${Math.round(rt)}ms`, top);
+      } else SND.bad();
       bumpStreak(good);
-      if (good) burst(ring, FX.s1);
-      feedback(`<span class="ms">${Math.round(rt)}ms</span> ${gradeOf(t('s1grades'), rt)}`, good, rt < 250);
+      feedback(`<span class="ms">${Math.round(rt)}ms</span> ${gradeOf(t('s1grades'), rt)}`, good, top);
       hud(0, i + 1, TRIALS);
       await sleep(750);
     }
@@ -1215,6 +1403,7 @@
             else {
               wrongThis++; data.s2wrong++;
               cell.classList.add('wrong');
+              SND.bad();
               buzz(30);
             }
           });
@@ -1222,9 +1411,16 @@
       });
       data.s2.push(rt + wrongThis * 300);   // wrong taps cost
       const good = rt < 2400 && wrongThis === 0;
+      const top = good && rt < 1000;
+      if (good) {
+        await hitStop();
+        if (top) SND.top(); else SND.good();
+        shakeGame(top);
+        burst(hitCell, FX.s2);
+        floatNum(hitCell, `${(rt / 1000).toFixed(2)}s`, top);
+      } else SND.beep(440, 60, 'square', 0.04); // found it, but slow / after misses
       bumpStreak(good);
-      if (good) burst(hitCell, FX.s2);
-      feedback(`<span class="ms">${(rt / 1000).toFixed(2)}s</span> ${gradeOf(t('s2grades'), rt)}`, good, good && rt < 1000);
+      feedback(`<span class="ms">${(rt / 1000).toFixed(2)}s</span> ${gradeOf(t('s2grades'), rt)}`, good, top);
       hud(1, i + 1, TRIALS);
       await sleep(750);
     }
@@ -1277,11 +1473,16 @@
       const rt = performance.now() - t0;
       const correct = ans === dir;
       data.s3.push({ incong, rt: ans ? rt : 1600, correct });
-      bumpStreak(correct);
-      if (!ans) feedback(t('s3miss'), false);
-      else if (!correct) feedback(t('s3bad'), false);
+      if (!ans) { SND.bad(); bumpStreak(false); feedback(t('s3miss'), false); }
+      else if (!correct) { SND.bad(); bumpStreak(false); feedback(t('s3bad'), false); }
       else {
-        burst(arena.querySelector('.arrows'), FX.s3);
+        await hitStop();
+        if (incong) SND.top(); else SND.good();
+        shakeGame(!!incong);
+        const arrowsEl = arena.querySelector('.arrows');
+        burst(arrowsEl, FX.s3);
+        floatNum(arrowsEl, `${Math.round(rt)}ms`, !!incong);
+        bumpStreak(true);
         feedback(`<span class="ms">${Math.round(rt)}ms</span> ${incong ? t('s3okHard') : t('s3ok')}`, true, !!incong);
       }
       hud(2, i + 1, TRIALS);
@@ -1395,6 +1596,74 @@
     $('copiedNote').textContent = t('copied');
     $('sciBody').textContent = t('sci');
     $('starAsk').innerHTML = t('starAsk') + `<a href="https://${REPO}" target="_blank" rel="noopener">${REPO}</a>`;
+  }
+
+  /* ---------- orchestrated results reveal (game path only; ?debug&mock and the
+     lang toggle call renderResults directly and stay instant) ---------- */
+  async function revealResults(an) {
+    renderResults(an);
+    show('results');
+    if (REDUCED_MOTION) { SND.fanfare(); return; }
+    const sprite = $('spriteCanvas');
+    const nameEls = [$('archetype'), $('archetypeTag'), document.querySelector('.lv')];
+    const rankEls = [...document.querySelectorAll('#networks .net-rank')];
+    const barData = [...document.querySelectorAll('#radarBox .hp-row')].map((row, i) => ({
+      blocks: [...row.querySelectorAll('.hp-blocks i')],
+      num: row.querySelector('.hp-num'),
+      score: an.scores[i],
+    }));
+    // blank the pieces before first paint, then reveal in sequence (< 2.5s total)
+    nameEls.forEach(el => { if (el) el.style.visibility = 'hidden'; });
+    rankEls.forEach(el => { el.style.visibility = 'hidden'; });
+    barData.forEach(b => {
+      b.blocks.forEach(bl => { bl.className = ''; });
+      b.num.textContent = '0';
+    });
+    // (a) sprite hatches with a steps-scale bounce
+    sprite.animate(
+      [
+        { transform: 'scale(0)' },
+        { transform: 'scale(1.25)' },
+        { transform: 'scale(0.9)' },
+        { transform: 'scale(1)' },
+      ],
+      { duration: 380, easing: 'steps(4, end)' }
+    );
+    SND.beep(660, 50);
+    SND.beep(990, 70, 'square', 0.05, 0.08);
+    await sleep(420);
+    // (b) HP bars fill with rising ticks, numbers counting up, 250ms stagger
+    await Promise.all(barData.map((b, i) => (async () => {
+      await sleep(i * 250);
+      const filled = Math.round(b.score / 5);
+      const cls = hpClass(b.score);
+      for (let k = 0; k < filled; k++) {
+        if (!b.blocks[k]) break;
+        b.blocks[k].className = `on ${cls}`;
+        b.num.textContent = String(Math.round(b.score * (k + 1) / filled));
+        if (k % 3 === 0) SND.beep(500 + i * 120 + k * 45, 25, 'square', 0.03);
+        await sleep(20);
+      }
+      b.num.textContent = String(b.score);
+    })()));
+    // (c) rank chips stamp in with a thud
+    await sleep(120);
+    SND.thud();
+    rankEls.forEach(el => {
+      el.style.visibility = '';
+      el.animate(
+        [{ transform: 'scale(1.6)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }],
+        { duration: 200, easing: 'steps(3, end)' }
+      );
+    });
+    // (d) archetype name + tagline land last, with the fanfare
+    await sleep(250);
+    nameEls.forEach(el => {
+      if (!el) return;
+      el.style.visibility = '';
+      el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'steps(3, end)' });
+    });
+    SND.fanfare();
   }
 
   /* ================= share card: collectible trainer card ================= */
@@ -1511,8 +1780,7 @@
     await stage2();
     await stage3();
     analysis = analyze();
-    renderResults(analysis);
-    show('results');
+    await revealResults(analysis);
   }
   $('startBtn').addEventListener('click', run);
   $('retryBtn').addEventListener('click', run);

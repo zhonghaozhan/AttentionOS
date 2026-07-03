@@ -4,97 +4,74 @@
 > Your attention span is still about 47 seconds.
 > The bottleneck isn't the model anymore — it's you.
 
-**AttentionOS is an open-source observability layer for the human in the loop.**
-It measures your attention the way you'd profile a system — context switches,
-interrupts, scheduler pressure, thermal throttling — and gives you the tools to
-defend it.
+**60 秒，测出你的注意力类型。** 一个开源的"人类注意力观测层"：
+先用 3 关小游戏给你的注意力做体检，再（roadmap）用桌宠和本地采集器
+守护它。数据永远不出你的设备。
+
+**▶ 立即游玩 / Play now: https://zhonghaozhan.github.io/AttentionOS/**
+
+| 🕹 HANDHELD（主打） | 💻 TERMINAL |
+|---|---|
+| [![handheld](assets/handheld-results.png)](https://zhonghaozhan.github.io/AttentionOS/demo/gbc.html) | [![terminal](assets/terminal-results.png)](https://zhonghaozhan.github.io/AttentionOS/demo/terminal.html) |
+| 彩色掌机 RPG · 训练师卡 | 深色街机终端 · `$ attn check-up` |
 
 *Attention is all you need. Yours. Not the model's.*
 
----
+## 它在测什么 / What it measures
 
-## Why
+三关分别对应 Posner & Petersen (1990) 的三大注意力网络（ANT 范式，
+Fan et al. 2002），全程实时评分、连击、音效、过关结算：
 
-Every layer of the AI stack is instrumented except one. We benchmark models,
-trace agents, eval harnesses, and A/B test multi-agent topologies. Meanwhile the
-human who reviews, decides, and context-switches between five agent sessions
-runs completely unprofiled — and that human is now the scarcest resource in the
-loop.
+1. **警觉 Alerting** — 信号一亮立刻出手（简单反应时）
+2. **定向 Orienting** — 在随机旋转的 T 群里找到同样被旋转的 L（串行视觉搜索）
+3. **执行 Executive** — 顶住两侧箭头的干扰，只回答中间（Eriksen flanker 冲突代价）
 
-The result is predictable: as agents do more, your job becomes pure attention
-allocation. And attention is being strip-mined — by notifications, by tab
-sprawl, and increasingly by your own agents interrupting you mid-thought.
+![stage 2](assets/handheld-stage2.png)
 
-AttentionOS treats your attention like the operating system resource it is:
+结果映射到文献常模的近似百分位，产出你的**注意力类型**
+（猎豹 / 鹰眼 / 堡垒 / 指挥官 / 均衡 / 漫游者）+ 三维属性 + 本周注意力处方，
+并生成可下载的训练师卡。完整公式、常模来源与诚实的局限性：
+[docs/SCIENCE.md](docs/SCIENCE.md)。
 
-| OS concept | Your day |
-|---|---|
-| Process | A task, or an agent session you supervise |
-| Context switch | Every window/task hop (and its recovery cost) |
-| Interrupt | Notifications, Slack, "quick questions", agent pings |
-| Scheduler | When deep work happens vs. when it gets preempted |
-| Interrupt coalescing | Batching pings into your low-focus windows |
-| Thermal throttling | Burnout — the system degrading to protect itself |
+纯浏览器运行：无账号、无埋点、无网络请求。双语（中/EN，右上角切换）。
 
-## What's here
+## 产品阶梯 / The ladder
 
-This is an early prototype. Three pieces:
+| 档位 | 形态 | 状态 |
+|---|---|---|
+| **AttentionOS mini** | 60s 浏览器体检（本页 demo） | ✅ 可玩 |
+| **AttentionOS** | 桌宠 + 本地采集器 + 每日结算卡 | 🛠 开发中 |
+| **AttentionOS Pro** | Dashboard + 进程归因 + 周报 + MCP server + Focus Shield | 📋 设计中 |
 
-### 1. The Attention Check-up (browser, zero install, 中/EN)
-A 60-second, 3-stage micro-game that profiles the three attentional networks
-of Posner & Petersen — **alerting, orienting, executive** (ANT paradigm,
-Fan et al. 2002) — with live per-response scoring, and ends in your
-**attention type** (Cheetah / Hawkeye / Fortress / Commander…), a radar
-profile, and a personalized attention-allocation prescription. Shareable
-result card included. Open [`demo/index.html`](demo/index.html) in a browser.
-No data leaves the page. Theory & honest limitations: [`docs/SCIENCE.md`](docs/SCIENCE.md).
+测试结果通过**存档码**（`attn1.…`）/ deep link / QR 传给桌面端：你的类型
+决定宠物物种，三网分数是初始属性，最弱的网络成为宠物的训练方向。
+设计细节：[docs/TIERS.md](docs/TIERS.md)。
 
-### 2. `attn` — the collector & profiler (CLI)
-A local-first attention profiler. Polls window focus, stores events in SQLite
-on your machine, and renders an `htop`-for-your-brain daily report.
+## `attn` — CLI 原型
+
+本地优先的注意力采集器（macOS）：
 
 ```sh
 cd cli
-python3 attn.py demo      # generate a synthetic workday (try it instantly)
-python3 attn.py report    # render the attention report
-python3 attn.py collect   # start the real macOS collector (local only)
+python3 attn.py demo      # 生成一天合成数据，立即体验
+python3 attn.py report    # htop 式注意力日报
+python3 attn.py collect   # 真实采集（数据只写本地 SQLite）
 ```
 
-### 3. The Metric Spec
-Five named, open metrics — [`docs/METRICS.md`](docs/METRICS.md) — so every tool
-can speak the same vocabulary:
+五个开放指标（Focus Half-Life、Context Switch Rate、Interrupt Load、
+Attention Budget、Recovery Debt）定义于 [docs/METRICS.md](docs/METRICS.md)。
 
-1. **Focus Half-Life** — median length of an uninterrupted focus block
-2. **Context Switch Rate** — switches per hour, with estimated recovery cost
-3. **Interrupt Load** — external preemptions vs. self-inflicted switches
-4. **Attention Budget** — deep-focus hours available, and what consumed them
-5. **Recovery Debt** — trailing 7-day budget overdraw; the burnout early-warning
+## 原则 / Principles
 
-## Principles
-
-- **Local-first, always.** Your attention data never leaves your machine by
-  default. An attention tracker that phones home is surveillance.
-- **No biometrics.** Window focus and input cadence only. No webcams, no
-  wearables in core. (Optional plugins can add them for those who want it.)
-- **Protective, not extractive.** This is not a productivity score to optimize
-  for your manager. It's an audit of who is strip-mining your attention, so you
-  can take it back. Scores are personal; sharing is opt-in bragging.
-- **Anti-burnout by design.** Recovery Debt is a first-class metric. An OS that
-  ignores thermal limits melts the chip.
-
-## Roadmap
-
-- [x] **Phase 0** — manifesto, metric spec v0.1, browser attention audit
-- [ ] **Phase 1** — macOS menu-bar collector, `attn top` live view, share cards
-- [ ] **Phase 2** — MCP server: agents query `attention://state` and batch
-      their interrupts until you surface from deep focus
-- [ ] **Phase 3** — plugin ecosystem (calendar, Slack, IDE), interrupt
-      scheduling, Linux/Windows collectors
+- **本地优先，永远。** 注意力数据不出设备；分享只在你主动导出时发生。
+- **无生物特征。** 只看窗口焦点与输入节奏，不碰摄像头和穿戴设备。
+- **保护性，而非榨取性。** 这是一份"谁在掠夺你的注意力"的审计，
+  不是交给老板的生产力评分。
+- **反燃尽为一等公民。** 无视热管理的系统会烧掉芯片。
 
 ## Contributing
 
-Phase 0 is a conversation starter. Open an issue with your sharpest take on the
-metric spec — especially if you think a metric is wrong. The vocabulary is the
-project.
+觉得测得准？点个 Star 就是对开源最好的投喂。
+觉得指标定义不对？开 issue 吵——词汇表本身就是这个项目的核心产出。
 
 MIT licensed.
