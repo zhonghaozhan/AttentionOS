@@ -716,6 +716,7 @@
     <div class="actions">
       <button class="btn" id="downloadBtn"></button>
       <button class="btn ghost" id="copyBtn"></button>
+      <button class="btn ghost" id="saveCodeBtn"></button>
       <button class="btn ghost" id="retryBtn"></button>
       <span class="copied-note" id="copiedNote"></span>
     </div>
@@ -804,7 +805,7 @@
         strength: (n) => `<strong>你的长板是${n}：</strong>把最难的深度任务，安排在你精力峰值的时段，让长板吃到最好的资源。`,
         universal: '想知道你的注意力一天被切碎多少次？用开源的 <strong>attn</strong> CLI 量化它 → github.com/zhonghaozhan/AttentionOS',
       },
-      dl: '保存训练师卡', copy: '复制战绩', retry: '再来一局',
+      dl: '保存训练师卡', copy: '复制战绩', retry: '再来一局', saveCode: '复制存档码',
       copied: '已复制 发出去等人来比',
       share: (name, s, p) => `我的注意力属性：${name}。警觉 ${s[0]} / 定向 ${s[1]} / 执行 ${s[2]}，超过约 ${p}% 常模。60 秒测一下你的 → zhonghaozhan.github.io/AttentionOS ${'#'}AttentionOS`,
       starAsk: '觉得准? 去 GITHUB 点个 STAR → ',
@@ -875,7 +876,7 @@
         strength: (n) => `<strong>Your edge is ${n}:</strong> schedule the hardest deep work into your peak-energy window and let your best network eat the best resources.`,
         universal: 'Want to know how many times a day your attention gets shredded? Measure it with the open-source <strong>attn</strong> CLI → github.com/zhonghaozhan/AttentionOS',
       },
-      dl: 'SAVE CARD', copy: 'COPY RESULT', retry: 'RETRY',
+      dl: 'SAVE CARD', copy: 'COPY RESULT', retry: 'RETRY', saveCode: 'COPY SAVE CODE',
       copied: 'COPIED — GO START AN ARGUMENT',
       share: (name, s, p) => `My attention type: ${name}. Alerting ${s[0]} / Orienting ${s[1]} / Executive ${s[2]} — ahead of ~${p}% of lab norms. 60 seconds, test yours → zhonghaozhan.github.io/AttentionOS ${'#'}AttentionOS`,
       starAsk: 'ACCURATE? FEED THE REPO A STAR → ',
@@ -1120,6 +1121,7 @@
       </div>`).join('');
     $('downloadBtn').textContent = t('dl');
     $('copyBtn').textContent = t('copy');
+    $('saveCodeBtn').textContent = t('saveCode');
     $('retryBtn').textContent = t('retry');
     $('copiedNote').textContent = t('copied');
     $('sciBody').textContent = t('sci');
@@ -1592,6 +1594,7 @@
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     $('downloadBtn').textContent = t('dl');
     $('copyBtn').textContent = t('copy');
+    $('saveCodeBtn').textContent = t('saveCode');
     $('retryBtn').textContent = t('retry');
     $('copiedNote').textContent = t('copied');
     $('sciBody').textContent = t('sci');
@@ -1769,6 +1772,18 @@
   $('copyBtn').addEventListener('click', async () => {
     const [aName] = t('archetypes')[analysis.type];
     try { await navigator.clipboard.writeText(t('share')(aName, analysis.scores, analysis.overall)); } catch {}
+    $('copiedNote').classList.add('show');
+    setTimeout(() => $('copiedNote').classList.remove('show'), 2200);
+  });
+  // Attention Profile v1 save code (docs/TIERS.md) — the desktop pet imports this
+  function makeSaveCode(an) {
+    const p = { v: 1, ts: new Date().toISOString(), type: an.type,
+      scores: { alerting: an.scores[0], orienting: an.scores[1], executive: an.scores[2] },
+      raw: { s1rt: an.s1rt, s2rt: an.s2rt, s3cost: an.s3cost, s3acc: an.s3acc }, lang };
+    return 'attn1.' + btoa(JSON.stringify(p)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  $('saveCodeBtn').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(makeSaveCode(analysis)); } catch {}
     $('copiedNote').classList.add('show');
     setTimeout(() => $('copiedNote').classList.remove('show'), 2200);
   });

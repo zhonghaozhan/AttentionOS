@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>AttentionOS</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: transparent; overflow: hidden; height: 100%; }
+  body {
+    font-family: "Courier New", monospace;
+    user-select: none;
+    -webkit-user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    padding-bottom: 6px;
+  }
+  #petCanvas {
+    image-rendering: pixelated;
+    cursor: grab;
+    filter: drop-shadow(2px 3px 0 rgba(48,40,72,0.25));
+  }
+  #petCanvas:active { cursor: grabbing; }
+  #bubble {
+    background: #fff;
+    border: 3px solid #302848;
+    box-shadow: 3px 3px 0 rgba(48,40,72,0.3);
+    color: #302848;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 5px 8px;
+    margin-bottom: 6px;
+    max-width: 170px;
+    text-align: center;
+    display: none;
+  }
+  #bubble.show { display: block; }
+  #panel {
+    position: fixed; inset: 0;
+    background: #f8f8f0;
+    border: 3px solid #302848;
+    padding: 10px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 10px;
+    color: #302848;
+  }
+  #panel.show { display: flex; }
+  #panel h3 { font-size: 11px; }
+  #panel .row { display: flex; justify-content: space-between; }
+  #panel input {
+    width: 100%; font-family: inherit; font-size: 9px;
+    border: 2px solid #302848; padding: 3px;
+  }
+  #panel button {
+    font-family: inherit; font-size: 10px; font-weight: bold;
+    background: #e04838; color: #fff; border: 2px solid #302848;
+    padding: 4px; cursor: pointer;
+  }
+  #panel .close { background: #f8f8f0; color: #302848; }
+  #err { color: #e04838; font-size: 9px; min-height: 11px; }
+</style>
+</head>
+<body>
+  <div id="bubble"></div>
+  <canvas id="petCanvas" width="96" height="96" data-tauri-drag-region></canvas>
+
+  <div id="panel">
+    <h3 id="pTitle">AttentionOS</h3>
+    <div class="row"><span>状态</span><b id="pMood">—</b></div>
+    <div class="row"><span>切换/小时</span><b id="pSwitch">—</b></div>
+    <div class="row"><span>今日深度专注</span><b id="pDeep">—</b></div>
+    <div class="row"><span>最长专注块</span><b id="pLong">—</b></div>
+    <input id="codeInput" placeholder="粘贴存档码 attn1.…" spellcheck="false">
+    <div id="err"></div>
+    <button id="importBtn">领养 / 导入存档码</button>
+    <button class="close" id="closeBtn">关闭</button>
+  </div>
+
+<script type="module">
+  const invoke = window.__TAURI__.core.invoke;
+
+  /* ---- sprites: palette-indexed 16x16 (0 transparent, 1 outline, 2 accent, 3 body) ---- */
+  const PAL = {
+    fortress:  [null, '#302848', '#e04838', '#a8a8a0'],
+    cheetah:   [null, '#302848', '#e04838', '#f8b830'],
+    hawkeye:   [null, '#302848', '#f8f8f0', '#3870c0'],
+    commander: [null, '#302848', '#f8b830', '#e04838'],
+    balanced:  [null, '#302848', '#f8f8f0', '#48d068'],
+    wanderer:  [null, '#302848', '#f8f8f0', '#9068d8'],
+  };
+  // balanced slime — default pet before any profile import
+  const SLIME = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+    [0,0,0,0,1,1,3,3,3,3,1,1,0,0,0,0],
+    [0,0,0,1,3,3,3,3,3,3,3,3,1,0,0,0],
+    [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
+    [0,0,1,3,3,1,1,3,3,1,1,3,3,1,0,0],
+    [0,1,3,3,3,1,1,3,3,1,1,3,3,3,1,0],
+    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
+    [0,1,3,3,3,3,3,2,2,3,3,3,3,3,1,0],
+    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
+    [0,1,3,3,3,3,3,3,3,3,3,3,3,3,1,0],
+    [0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0],
+    [0,0,0,1,1,3,3,3,3,3,3,1,1,0,0,0],
+    [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  ];
+
+  const canvas = document.getElementById('petCanvas');
+  const ctx = canvas.getContext('2d');
+  let species = 'balanced';
+  let mood = 'calm';
+  let frame = 0;
+
+  function drawSprite(grid, pal, scale, dy = 0, blink = false) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const ox = (canvas.width - 16 * scale) / 2;
+    const oy = (canvas.height - 16 * scale) / 2 + dy;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      let v = grid[y][x];
+      if (!v) continue;
+      // crude blink: eye rows (1-indexed cells that are outline inside face) -> body when blinking
+      if (blink && v === 1 && y >= 6 && y <= 7 && x >= 4 && x <= 11) v = 3;
+      ctx.fillStyle = pal[v];
+      ctx.fillRect(ox + x * scale, oy + y * scale, scale, scale);
+    }
+  }
+
+  function tick() {
+    frame++;
+    const pal = PAL[species] || PAL.balanced;
+    let dy = 0, blink = false;
+    if (mood === 'focused') dy = -Math.abs(Math.sin(frame / 4)) * 6;         // happy bounce
+    else if (mood === 'frazzled') dy = (frame % 2 ? 1 : -1) * 2;             // jitter
+    else if (mood === 'sleeping') { dy = 2; blink = true; }                  // eyes closed
+    else blink = frame % 24 < 2;                                            // idle blink
+    drawSprite(SLIME, pal, 5, dy, blink);
+  }
+  setInterval(tick, 140);
+
+  /* ---- state loop ---- */
+  const MOOD_ZH = { sleeping: '睡着了', calm: '平静', focused: '心流中', frazzled: '被切碎了!' };
+  const bubble = document.getElementById('bubble');
+  let lastMood = '';
+
+  async function refresh() {
+    try {
+      const s = await invoke('get_state');
+      mood = s.mood;
+      document.getElementById('pMood').textContent = MOOD_ZH[s.mood] || s.mood;
+      document.getElementById('pSwitch').textContent = s.switches_per_hr + ' 次';
+      document.getElementById('pDeep').textContent = s.deep_focus_min + ' 分钟';
+      document.getElementById('pLong').textContent = s.longest_block_min + ' 分钟';
+      if (s.mood !== lastMood) {
+        lastMood = s.mood;
+        if (s.mood === 'frazzled') say('切换太多了，我头晕…');
+        else if (s.mood === 'focused') say('嘘——心流中');
+      }
+    } catch (e) { /* backend not ready yet */ }
+  }
+  function say(text, ms = 3500) {
+    bubble.textContent = text;
+    bubble.classList.add('show');
+    setTimeout(() => bubble.classList.remove('show'), ms);
+  }
+  refresh();
+  setInterval(refresh, 10000);
+
+  /* ---- panel & import ---- */
+  const panel = document.getElementById('panel');
+  canvas.addEventListener('dblclick', () => panel.classList.add('show'));
+  document.getElementById('closeBtn').addEventListener('click', () => panel.classList.remove('show'));
+  document.getElementById('importBtn').addEventListener('click', async () => {
+    const code = document.getElementById('codeInput').value;
+    try {
+      const p = await invoke('import_profile', { code });
+      species = p.type || 'balanced';
+      document.getElementById('err').textContent = '';
+      panel.classList.remove('show');
+      say(`领养成功！${species} 已上岗`);
+    } catch (e) {
+      document.getElementById('err').textContent = String(e);
+    }
+  });
+  invoke('get_profile').then(p => { if (p && p.type) species = p.type; }).catch(() => {});
+</script>
+</body>
+</html>

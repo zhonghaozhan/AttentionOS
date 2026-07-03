@@ -40,8 +40,10 @@ Fan et al. 2002），全程实时评分、连击、音效、过关结算：
 | 档位 | 形态 | 状态 |
 |---|---|---|
 | **AttentionOS mini** | 60s 浏览器体检（本页 demo） | ✅ 可玩 |
-| **AttentionOS** | 桌宠 + 本地采集器 + 每日结算卡 | 🛠 开发中 |
+| **AttentionOS** | 桌宠 + 本地采集器 + 每日结算卡 | 🛠 骨架可跑（[desktop/](desktop/)） |
 | **AttentionOS Pro** | Dashboard + 进程归因 + 周报 + MCP server + Focus Shield | 📋 设计中 |
+
+测完点「复制存档码」→ 桌宠端双击宠物粘贴导入，你的类型就是它的物种。
 
 测试结果通过**存档码**（`attn1.…`）/ deep link / QR 传给桌面端：你的类型
 决定宠物物种，三网分数是初始属性，最弱的网络成为宠物的训练方向。
