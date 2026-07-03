@@ -3,10 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ATTENTION-OS — 60秒注意力体检 · TERMINAL ARCADE</title>
-<meta name="description" content="基于神经科学三大注意力网络的60秒测试。3关小游戏，实时判定，生成你的注意力角色卡。数据不出浏览器。">
-<meta property="og:title" content="60秒，测出你的注意力属性">
-<meta property="og:description" content="警觉 · 定向 · 执行 —— 3关小游戏，通关生成你的注意力角色卡。数据不出浏览器。">
+<title>Attention Span Test in Your Terminal Style — 60s | AttentionOS 注意力测试</title>
+<meta name="description" content="$ attn check-up — a free 60-second attention span test styled as a dark arcade terminal. Three micro-games map your alerting, orienting and executive networks (ANT paradigm). No login, nothing leaves your browser. 60秒终端风注意力测试。">
+<meta name="keywords" content="attention span test,attention test,focus test,terminal,注意力测试,专注力测试,ANT">
+<link rel="canonical" href="https://zhonghaozhan.github.io/AttentionOS/demo/terminal.html">
+<meta property="og:title" content="$ attn check-up — a 60s attention test for terminal people">
+<meta property="og:description" content="Alerting · Orienting · Executive — three micro-games, an archetype, a prescription. Nothing leaves your browser.">
+<meta property="og:url" content="https://zhonghaozhan.github.io/AttentionOS/demo/terminal.html">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://zhonghaozhan.github.io/AttentionOS/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zhonghaozhan.github.io/AttentionOS/assets/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
@@ -1177,7 +1184,7 @@
 
   function applyLang() {
     document.documentElement.lang = lang;
-    document.title = lang === 'zh' ? 'ATTENTION-OS — 60秒注意力体检 · TERMINAL ARCADE' : 'ATTENTION-OS — 60S ATTENTION CHECK-UP · TERMINAL ARCADE';
+    document.title = lang === 'zh' ? '60秒注意力测试 · 终端风 | AttentionOS' : 'Attention Span Test in Your Terminal | AttentionOS';
     $('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     $('heroTitle').innerHTML = t('title');

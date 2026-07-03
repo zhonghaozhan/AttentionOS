@@ -3,10 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>ATTENTION-OS — 60秒注意力体检 · HANDHELD</title>
-<meta name="description" content="基于神经科学三大注意力网络的60秒测试。3关小游戏，实时判定，生成你的注意力角色卡。数据不出浏览器。">
-<meta property="og:title" content="60秒，测出你的注意力属性">
-<meta property="og:description" content="警觉 · 定向 · 执行 —— 3关小游戏，通关生成你的注意力角色卡。数据不出浏览器。">
+<title>60秒注意力测试 — 测出你的注意力类型 | AttentionOS Attention Span Test</title>
+<meta name="description" content="免费在线注意力测试：60秒、3个像素小游戏，基于神经科学三大注意力网络（警觉/定向/执行，ANT范式）测出你的专注力类型。无需登录，数据不出浏览器。Free 60-second attention span test.">
+<meta name="keywords" content="注意力测试,专注力测试,注意力类型,attention span test,attention test,focus test,ANT">
+<link rel="canonical" href="https://zhonghaozhan.github.io/AttentionOS/demo/gbc.html">
+<meta property="og:title" content="60秒，测出你的注意力类型">
+<meta property="og:description" content="警觉 · 定向 · 执行 —— 3关像素小游戏，通关生成你的注意力训练师卡。无需登录，数据不出浏览器。">
+<meta property="og:url" content="https://zhonghaozhan.github.io/AttentionOS/demo/gbc.html">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://zhonghaozhan.github.io/AttentionOS/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zhonghaozhan.github.io/AttentionOS/assets/og.png">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication","name":"AttentionOS Attention Check-up","url":"https://zhonghaozhan.github.io/AttentionOS/demo/gbc.html","applicationCategory":"HealthApplication","operatingSystem":"Web","offers":{"@type":"Offer","price":"0"},"description":"A free 60-second attention span test based on the three attentional networks (Posner & Petersen, ANT paradigm)."}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
@@ -1107,7 +1117,7 @@
 
   function applyLang() {
     document.documentElement.lang = lang;
-    document.title = lang === 'zh' ? 'ATTENTION-OS — 60秒注意力体检 · HANDHELD' : 'ATTENTION-OS — 60S ATTENTION CHECK-UP · HANDHELD';
+    document.title = lang === 'zh' ? '60秒注意力测试 — 测出你的注意力类型 | AttentionOS' : 'Attention Span Test — What Is Your Attention Type? | AttentionOS';
     $('langBtn').textContent = lang === 'zh' ? 'EN' : '中';
     document.querySelectorAll('[data-i18n]').forEach(el => { el.innerHTML = t(el.dataset.i18n); });
     $('heroTitle').innerHTML = t('title');

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>og card</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Noto+Sans+SC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 1200px; height: 630px; overflow: hidden;
+    background: #f8f8f0;
+    font-family: "Noto Sans SC", sans-serif;
+    display: flex; align-items: center;
+    position: relative;
+  }
+  .frame {
+    position: absolute; inset: 22px;
+    border: 6px solid #302848;
+  }
+  .left { width: 460px; display: grid; place-items: center; }
+  #ghost { image-rendering: pixelated; width: 336px; height: 336px; filter: drop-shadow(8px 10px 0 rgba(48,40,72,0.18)); }
+  .right { flex: 1; padding-right: 90px; }
+  .kicker {
+    font-family: "Press Start 2P", monospace;
+    font-size: 20px; color: #e04838; letter-spacing: 2px;
+    margin-bottom: 26px;
+  }
+  h1 { font-size: 74px; font-weight: 900; color: #302848; line-height: 1.25; margin-bottom: 30px; }
+  h1 span { color: #e04838; }
+  .bars { display: grid; gap: 14px; max-width: 520px; margin-bottom: 30px; }
+  .bar { display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 22px; color: #302848; }
+  .bar .track { flex: 1; height: 18px; background: #e8e8e0; border: 3px solid #302848; position: relative; }
+  .bar .track i { position: absolute; inset: 0; }
+  .sub { font-size: 24px; color: #6e6a80; font-weight: 700; }
+  .sub b { color: #302848; }
+</style>
+</head>
+<body>
+  <div class="frame"></div>
+  <div class="left"><canvas id="ghost" width="24" height="24"></canvas></div>
+  <div class="right">
+    <div class="kicker">ATTENTION-OS · 60S CHECK-UP</div>
+    <h1>60秒，测出你的<br><span>注意力类型</span></h1>
+    <div class="bars">
+      <div class="bar"><span>警觉</span><div class="track"><i style="background:#e04838;width:78%"></i></div></div>
+      <div class="bar"><span>定向</span><div class="track"><i style="background:#3870c0;width:64%"></i></div></div>
+      <div class="bar"><span>执行</span><div class="track"><i style="background:#48d068;width:88%"></i></div></div>
+    </div>
+    <div class="sub">3 关像素小游戏 · 无需登录 · 数据不出浏览器 — <b>Free attention span test</b></div>
+  </div>
+<script>
+  const G = ['000000000000000000000000','000000000000000000000000','000000000000000000000000',
+    '000000001111111100000000','000000113333333311000000','000001333333333333100000',
+    '000013333333333333310000','000013333333333333310000','000133333333333333331000',
+    '000133351133335113331000','000133311133331113331000','000133311133331113331000',
+    '000133311133331113321000','000133333333333333321000','000134433333333334421000',
+    '000133333331133333321000','000133333333333333321000','000133333333333333321000',
+    '000133333333333333321000','000133333333333333321000','000133331133331133321000',
+    '000013310013310013310000','000001100001100001100000','000000000000000000000000'];
+  const P = [null,'#302848','#dee0ee','#ffffff','#f4a8c0','#ffffff'];
+  const c = document.getElementById('ghost').getContext('2d');
+  for (let y=0;y<24;y++) for (let x=0;x<24;x++){const v=+G[y][x]; if(!v)continue; c.fillStyle=P[v]; c.fillRect(x,y,1,1);}
+</script>
+</body>
+</html>
