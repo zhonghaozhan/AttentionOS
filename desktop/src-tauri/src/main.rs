@@ -57,13 +57,47 @@ fn frontmost_app() -> Option<String> {
     if name.is_empty() { None } else { Some(name) }
 }
 
+/// Seconds since the last keyboard/mouse input (HIDIdleTime, ns → s).
+fn idle_secs() -> f64 {
+    let out = match Command::new("ioreg").args(["-c", "IOHIDSystem"]).output() {
+        Ok(o) => o,
+        Err(_) => return 0.0,
+    };
+    let text = String::from_utf8_lossy(&out.stdout);
+    for line in text.lines() {
+        if line.contains("HIDIdleTime") {
+            if let Some(v) = line.split('=').nth(1) {
+                if let Ok(ns) = v.trim().parse::<f64>() {
+                    return ns / 1e9;
+                }
+            }
+        }
+    }
+    0.0
+}
+
 /// Collector: on focus change, close the previous event and open a new one.
+const IDLE_CUTOFF_S: f64 = 120.0;
+
 fn collector_thread() {
     let conn = open_db();
     let mut current: Option<(String, f64)> = None;
     loop {
-        if let Some(name) = frontmost_app() {
-            let now = now_ts();
+        let now = now_ts();
+        let idle = idle_secs();
+        if idle > IDLE_CUTOFF_S {
+            // user walked away: close the open event at the moment input stopped
+            if let Some((cur, started)) = current.take() {
+                let end = (now - idle).max(started);
+                if end - started > 1.0 {
+                    conn.execute(
+                        "INSERT INTO focus_events VALUES (?1, ?2, ?3)",
+                        rusqlite::params![cur, started, end],
+                    )
+                    .ok();
+                }
+            }
+        } else if let Some(name) = frontmost_app().filter(|n| n != "attentionos" && n != "AttentionOS") {
             match &current {
                 Some((cur, started)) if *cur != name => {
                     conn.execute(

@@ -14,7 +14,7 @@
         "label": "pet",
         "title": "AttentionOS",
         "width": 180,
-        "height": 200,
+        "height": 250,
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,

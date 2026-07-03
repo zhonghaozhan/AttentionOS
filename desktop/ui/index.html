@@ -47,6 +47,28 @@
     animation: tabblink 2.4s steps(2) infinite;
   }
   @keyframes tabblink { 50% { opacity: 0.25; } }
+
+  /* radial action ring — game-style hover menu around the pet */
+  #ring { position: fixed; inset: 0; pointer-events: none; }
+  .ring-btn {
+    position: absolute;
+    width: 30px; height: 30px;
+    background: #fff;
+    border: 3px solid #302848;
+    box-shadow: 2px 2px 0 rgba(48,40,72,0.35);
+    color: #302848;
+    font-size: 14px; line-height: 1;
+    display: grid; place-items: center;
+    cursor: pointer;
+    pointer-events: auto;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: opacity 0.15s steps(3), transform 0.15s steps(3);
+    user-select: none;
+  }
+  #ring.show .ring-btn { opacity: 1; transform: scale(1); }
+  .ring-btn:hover { background: #f8b830; }
+  .ring-btn:active { transform: translate(2px, 2px); }
   #bubble {
     background: #fff;
     border: 3px solid #302848;
@@ -97,19 +119,21 @@
   <div id="bubble"></div>
   <canvas id="petCanvas" width="120" height="120" data-tauri-drag-region></canvas>
   <div id="dockTab" title="AttentionOS"><i></i></div>
+  <div id="ring">
+    <div class="ring-btn" id="rbDash"  style="left:6px;   top:118px" title="今日报告">▦</div>
+    <div class="ring-btn" id="rbDock"  style="left:144px; top:118px" title="挂到屏幕边缘">⇥</div>
+    <div class="ring-btn" id="rbFlow"  style="left:6px;   top:162px" title="心流模式 2h">☾</div>
+    <div class="ring-btn" id="rbCard"  style="left:144px; top:162px" title="状态卡 / 领养">❐</div>
+  </div>
 
   <div id="panel">
     <h3 id="pTitle">AttentionOS</h3>
     <div class="row"><span>状态</span><b id="pMood">—</b></div>
     <div class="row"><span>切换/小时</span><b id="pSwitch">—</b></div>
     <div class="row"><span>今日深度专注</span><b id="pDeep">—</b></div>
-    <div class="row"><span>最长专注块</span><b id="pLong">—</b></div>
     <input id="codeInput" placeholder="粘贴存档码 attn1.…" spellcheck="false">
     <div id="err"></div>
     <button id="importBtn">领养 / 导入存档码</button>
-    <button id="dashBtn" style="background:#3870c0">完整报告</button>
-    <button id="dockBtn" style="background:#f8b830;color:#302848">挂到屏幕边缘</button>
-    <button id="flowBtn" style="background:#302848">心流模式（隐藏 2h）</button>
     <button class="close" id="closeBtn">关闭</button>
   </div>
 
@@ -240,7 +264,6 @@
       document.getElementById('pMood').textContent = MOOD_ZH[s.mood] || s.mood;
       document.getElementById('pSwitch').textContent = s.switches_per_hr + ' 次';
       document.getElementById('pDeep').textContent = s.deep_focus_min + ' 分钟';
-      document.getElementById('pLong').textContent = s.longest_block_min + ' 分钟';
       if (s.mood !== lastMood) {
         lastMood = s.mood;
         if (s.mood === 'frazzled') say('切换太多了，我头晕…');
@@ -284,9 +307,30 @@
       document.getElementById('err').textContent = String(e);
     }
   });
-  document.getElementById('dashBtn').addEventListener('click', () => {
+  /* ---- radial action ring: hover the pet, actions appear around it ---- */
+  const ring = document.getElementById('ring');
+  let ringTimer = null;
+  function showRing() {
+    if (docked || panel.classList.contains('show')) return;
+    clearTimeout(ringTimer);
+    ring.classList.add('show');
+  }
+  function hideRing(delay = 250) {
+    clearTimeout(ringTimer);
+    ringTimer = setTimeout(() => ring.classList.remove('show'), delay);
+  }
+  canvas.addEventListener('mouseenter', showRing);
+  ring.addEventListener('mouseenter', showRing);
+  document.addEventListener('mouseleave', () => hideRing(150));
+  canvas.addEventListener('mouseleave', () => hideRing(600));
+
+  document.getElementById('rbDash').addEventListener('click', () => {
     invoke('open_dashboard').catch(() => {});
-    panel.classList.remove('show');
+    hideRing(0);
+  });
+  document.getElementById('rbCard').addEventListener('click', () => {
+    panel.classList.add('show');
+    hideRing(0);
   });
 
   /* ---- edge docking: the pet's default is to NOT steal your attention ----
@@ -361,11 +405,14 @@
   });
   // clicking the pet while peeked = pull it out for good
   canvas.addEventListener('pointerdown', () => { if (docked && peeked) { docked = false; peeked = false; dockTab.classList.remove('show'); } });
-  document.getElementById('dockBtn').addEventListener('click', () => dockEdge(true));
-  document.getElementById('flowBtn').addEventListener('click', () => {
+  document.getElementById('rbDock').addEventListener('click', () => {
+    hideRing(0);
+    dockEdge(true);
+  });
+  document.getElementById('rbFlow').addEventListener('click', () => {
+    hideRing(0);
     say('心流模式：2 小时后见。我在后台守着。', 2500);
     setTimeout(() => invoke('focus_mode', { hours: 2 }).catch(() => {}), 2600);
-    panel.classList.remove('show');
   });
 
   /* ---- auto behavior: visibility inversely proportional to your focus ---- */
