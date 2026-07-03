@@ -80,6 +80,15 @@ def attention_state():
         "away": "User is away from the machine. Queue results; expect no response.",
     }[state]
 
+    waiting = []
+    try:
+        waiting = [
+            {"session": s[-8:] if s else "?", "waiting_min": round(w / 60, 1)}
+            for s, w in attn.agents_waiting_now(attn.db())
+        ]
+    except Exception:
+        pass
+
     return {
         "state": state,
         "advice": advice,
@@ -88,6 +97,7 @@ def attention_state():
         "in_deep_block": in_deep,
         "current_block_min": round((current[2] - current[1]) / 60) if current else 0,
         "current_app": rows[-1][0] if rows and not away else None,
+        "agents_waiting_on_user": waiting,
         "as_of": datetime.datetime.now().isoformat(timespec="seconds"),
     }
 

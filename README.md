@@ -45,7 +45,9 @@ Fan et al. 2002），全程实时评分、连击、音效、过关结算：
 
 **你的 Agent 现在可以学会不打扰你**：注册 [MCP server](docs/MCP.md) 后，
 Claude Code 会在打断你之前先查 `attention://state`——你在深度专注块里时，
-它自己憋住问题攒着批量问。
+它自己憋住问题攒着批量问。再接上 [hooks 联动](docs/AGENTS.md)，时间线升级为
+**人机联合注意力**：agent 干活时你切走算并行不算分心，agent 等你的每一分钟
+成为 `Agent-Wait Cost` 指标，状态栏里的 ASCII 宠物会提醒"⏳等你 5m"。
 
 测完点「复制存档码」→ 桌宠端双击宠物粘贴导入，你的类型就是它的物种。
 

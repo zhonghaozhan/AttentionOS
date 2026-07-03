@@ -9,6 +9,9 @@ Usage:
   attn.py collect [secs]     start the macOS collector (polls frontmost app)
   attn.py report [YYYY-MM-DD]  render the attention report
   attn.py pet                one-line ASCII pet reflecting your last 30 min
+  attn.py agent-event STATE  record an agent state change (working|waiting|notify)
+                             — wire into Claude Code hooks, see docs/AGENTS.md
+  attn.py statusline         one-line status for the Claude Code statusline
   attn.py wipe               delete all local data
 """
 import datetime
@@ -247,6 +250,10 @@ def report(date):
           f"   {DIM}external · {self_pct}% self-inflicted{RESET}")
     print(f"  {'Attention Budget':<22}{BOLD}{a['deep_focus_min']:>6.0f} min{RESET}"
           f"   {DIM}deep focus banked today{RESET}")
+    aw = agent_wait_today(db())
+    if aw >= 1:
+        print(f"  {'Agent-Wait Cost':<22}{YELLOW}{BOLD}{aw:>6.0f} min{RESET}"
+              f"   {DIM}agents sat waiting for your input today{RESET}")
 
     print(f"\n  {BOLD}timeline{RESET}  {DIM}{GREEN}█{RESET}{DIM} deep focus"
           f"  {RED}▒{RESET}{DIM} shallow/shredded  ␣ idle{RESET}")
@@ -265,6 +272,103 @@ def report(date):
                "leaking" if a["fhl"] >= 7 else "strip-mined")
     print(f"  verdict: attention {BOLD}{verdict}{RESET} · "
           f"data local at {DIM}{DB_PATH}{RESET}\n")
+
+
+# ---------------------------------------------------------------- agents
+def agent_events_table(conn):
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS agent_events ("
+        " session TEXT NOT NULL, state TEXT NOT NULL, ts REAL NOT NULL)"
+    )
+
+
+def agent_event(state):
+    """Record a coding-agent state change. Fed by Claude Code hooks:
+    UserPromptSubmit -> working, Stop -> waiting, Notification -> notify.
+    This turns the human-only timeline into a JOINT attention timeline:
+    switches while the agent works are supervision, not fragmentation;
+    minutes the agent spends waiting for you are a cost worth seeing."""
+    import json as _json
+    payload = {}
+    try:
+        if not sys.stdin.isatty():
+            raw = sys.stdin.read()
+            if raw.strip():
+                payload = _json.loads(raw)
+    except Exception:
+        payload = {}
+    conn = db()
+    agent_events_table(conn)
+    conn.execute(
+        "INSERT INTO agent_events VALUES (?, ?, ?)",
+        (payload.get("session_id", ""), state, time.time()),
+    )
+    conn.commit()
+
+
+def agent_wait_today(conn):
+    """Total minutes agents sat in 'waiting' before your next prompt today
+    (per session, capped at 30 min per stretch — beyond that you left)."""
+    agent_events_table(conn)
+    d0 = datetime.datetime.combine(datetime.date.today(), datetime.time.min).timestamp()
+    rows = conn.execute(
+        "SELECT session, state, ts FROM agent_events WHERE ts >= ? ORDER BY ts", (d0,)
+    ).fetchall()
+    total, open_wait = 0.0, {}
+    for session, state, ts in rows:
+        if state == "waiting":
+            open_wait.setdefault(session, ts)
+        elif state == "working" and session in open_wait:
+            total += min(ts - open_wait.pop(session), 1800)
+    now = time.time()
+    for ts in open_wait.values():
+        total += min(now - ts, 1800)
+    return total / 60
+
+
+def agents_waiting_now(conn, within=1800):
+    """Sessions currently stopped and waiting on the human."""
+    agent_events_table(conn)
+    rows = conn.execute(
+        "SELECT session, state, ts FROM agent_events WHERE ts >= ? ORDER BY ts",
+        (time.time() - within,),
+    ).fetchall()
+    last = {}
+    for session, state, ts in rows:
+        last[session] = (state, ts)
+    return [(s, time.time() - ts) for s, (st, ts) in last.items() if st == "waiting"]
+
+
+def statusline():
+    """One line for the Claude Code statusline: pet face + focus + agent-wait."""
+    now = time.time()
+    conn = db()
+    rows = conn.execute(
+        "SELECT source, start, end FROM focus_events WHERE end >= ?"
+        " AND lower(source) NOT IN ('attentionos') ORDER BY start", (now - 1800,)
+    ).fetchall()
+    switches = sum(1 for i in range(1, len(rows)) if rows[i][0] != rows[i - 1][0])
+    tracked = sum(min(e, now) - max(s, now - 1800) for _, s, e in rows) / 60
+    rate = switches * 60 / tracked if tracked > 1 else 0
+    events = load_events(datetime.date.today())
+    blocks = focus_blocks(events) if events else []
+    deep = sum((e - s) / 60 for _, s, e in blocks if e - s >= 600)
+    in_block = any(now - e < 120 for _, s, e in blocks)
+
+    if tracked < 2:
+        face = "(=∪ω∪=)zZ"
+    elif rate > 25:
+        face = "(=>д<=)!!"
+    elif in_block and rate < 8:
+        face = "(=˃ᴗ˂=)✧"
+    else:
+        face = "(=˘ᴗ˘=)"
+    parts = [face, f"专注{deep:.0f}m"]
+    waits = agents_waiting_now(conn)
+    if waits:
+        longest = max(w for _, w in waits)
+        parts.append(f"⏳等你{longest/60:.0f}m" if longest >= 60 else "⏳待命")
+    print(" · ".join(parts))
 
 
 # ---------------------------------------------------------------- pet
@@ -308,6 +412,10 @@ def main(argv):
         report(date)
     elif cmd == "pet":
         pet()
+    elif cmd == "agent-event":
+        agent_event(argv[2] if len(argv) > 2 else "working")
+    elif cmd == "statusline":
+        statusline()
     elif cmd == "wipe":
         if os.path.exists(DB_PATH):
             os.remove(DB_PATH)
