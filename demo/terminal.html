@@ -1430,6 +1430,7 @@
     for (const [max, label] of table) if (rt < max) return label;
   }
   function stageCard(idx) {
+    driftersClear(true);                  // clean screen for the briefing
     return new Promise(res => {
       const [k, h, p] = t('stageIntro')[idx];
       const goLabel = lang === 'zh' ? '按空格 继续 ▸' : 'SPACE TO CONTINUE ▸';
@@ -1447,6 +1448,7 @@
     });
   }
   async function stamp(idx, score) {
+    driftersClear(true);                  // clean screen for the stage-clear moment
     const lines = t('stampLines')[idx];
     const line = score >= 75 ? lines[0] : score >= 55 ? lines[1] : lines[2];
     const el = document.createElement('div');
@@ -1468,7 +1470,7 @@
     const TRIALS = 5;
     data.s1 = []; data.s1false = 0; streakN = 0;
     hud(0, 0, TRIALS);
-    await stageCard(0);
+    await stageCard(0); driftHold = false;
     for (let i = 0; i < TRIALS; i++) {
       hud(0, i, TRIALS);
       arena.innerHTML = `<div class="signal-ring" id="ring">${t('waiting')}</div>`;
@@ -1533,7 +1535,7 @@
     const TRIALS = 5, CELLS = 12;
     data.s2 = []; data.s2wrong = 0; streakN = 0;
     hud(1, 0, TRIALS);
-    await stageCard(1);
+    await stageCard(1); driftHold = false;
     for (let i = 0; i < TRIALS; i++) {
       hud(1, i, TRIALS);
       const target = Math.floor(Math.random() * CELLS);
@@ -1585,7 +1587,7 @@
     const TRIALS = 8;
     data.s3 = []; streakN = 0;
     hud(2, 0, TRIALS);
-    await stageCard(2);
+    await stageCard(2); driftHold = false;
     const conds = [1, 1, 1, 1, 0, 0, 0, 0].sort(() => Math.random() - 0.5); // 1=incongruent
     const lr = document.createElement('div');
     lr.className = 'lr-buttons';
@@ -1913,10 +1915,11 @@
 
   /* ---- ghost drifters: during the test, Boos float across the screen.
      They are pure distraction — which is exactly the point. ---- */
-  let driftTimer = null;
+  let driftTimer = null, driftHold = false;
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const DRIFT_PAL = ['', '#585068', '#dee0ee', '#ffffff', '#f2b8c6', '#ffffff'];  // classic white Boo
   function spawnDrifter() {
+    if (driftHold) return;
     const grid = SPRITES.wanderer;                  // same silhouette as the default ghost
     const n = grid.length;
     const cv = document.createElement('canvas');
@@ -1955,8 +1958,16 @@
     }, 2200);
   }
   function driftersOff() {
-    clearInterval(driftTimer); driftTimer = null;
+    clearInterval(driftTimer); driftTimer = null; driftHold = false;
     document.querySelectorAll('.drifter').forEach(d => d.remove());
+  }
+  function driftersClear(hold) {          // between stages: fade out, hold new spawns
+    if (hold !== undefined) driftHold = hold;
+    document.querySelectorAll('.drifter').forEach(d => {
+      d.style.transition = 'opacity 0.6s';
+      d.style.opacity = '0';
+      setTimeout(() => d.remove(), 650);
+    });
   }
 
   /* ================= flow ================= */
