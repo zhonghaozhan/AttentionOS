@@ -1980,33 +1980,44 @@
      They are pure distraction — which is exactly the point. ---- */
   let driftTimer = null;
   const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DRIFT_PAL = ['', '#585068', '#dee0ee', '#ffffff', '#f2b8c6', '#ffffff'];  // classic white Boo
   function spawnDrifter() {
-    const grid = SPRITES.wanderer, pal = PAL.wanderer;
+    const grid = SPRITES.wanderer;                  // same silhouette as the default ghost
     const n = grid.length;
     const cv = document.createElement('canvas');
     cv.width = n; cv.height = n; cv.className = 'drifter';
     const c = cv.getContext('2d');
     for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
       const v = +grid[y][x]; if (!v) continue;
-      c.fillStyle = pal[v] || pal[1]; c.fillRect(x, y, 1, 1);
+      c.fillStyle = DRIFT_PAL[v] || DRIFT_PAL[1]; c.fillRect(x, y, 1, 1);
     }
     const fromLeft = Math.random() < 0.5;
-    cv.style.top = (8 + Math.random() * 58) + 'vh';
+    cv.style.top = (6 + Math.random() * 62) + 'vh';
     cv.style.left = fromLeft ? '-64px' : 'calc(100vw + 20px)';
     document.body.appendChild(cv);
+    // wavy, individual flight: sine wander + drift + per-ghost speed
     const dx = (fromLeft ? 1 : -1) * (innerWidth + 180);
-    const dy = Math.random() * 140 - 70;
-    const anim = cv.animate(
-      [{ transform: 'translate(0,0)' }, { transform: `translate(${dx}px, ${dy}px)` }],
-      { duration: 8000 + Math.random() * 6000, easing: 'linear' });
+    const driftY = Math.random() * 160 - 80;
+    const amp = 24 + Math.random() * 60;
+    const waves = 1.5 + Math.random() * 2.5;
+    const steps = 8;
+    const frames = [];
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      frames.push({
+        transform: `translate(${dx * t}px, ${driftY * t + Math.sin(t * Math.PI * 2 * waves) * amp}px)`,
+        easing: 'ease-in-out',
+      });
+    }
+    const anim = cv.animate(frames, { duration: 5000 + Math.random() * 11000, easing: 'linear' });
     anim.onfinish = () => cv.remove();
     anim.oncancel = () => cv.remove();
   }
   function driftersOn() {
     if (driftTimer || REDUCED) return;
     driftTimer = setInterval(() => {
-      if (document.querySelectorAll('.drifter').length < 3 && Math.random() < 0.7) spawnDrifter();
-    }, 3000);
+      if (document.querySelectorAll('.drifter').length < 5 && Math.random() < 0.8) spawnDrifter();
+    }, 2200);
   }
   function driftersOff() {
     clearInterval(driftTimer); driftTimer = null;
