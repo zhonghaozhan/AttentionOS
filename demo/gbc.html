@@ -644,6 +644,16 @@
   @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
   }
+
+  /* ghost drifters — ambient distractors, the mascot working against you */
+  .drifter {
+    position: fixed;
+    z-index: 20;                       /* above the opaque game layer (z 10) */
+    width: 56px; height: 56px;
+    opacity: 0.8;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -1681,18 +1691,18 @@
 
   function scoreAlerting() {
     const rt = median(data.s1);
-    return clamp100(logistic(rt, 350, 55) - data.s1false * 6);
+    return clamp100(logistic(rt, 330, 50) - data.s1false * 6);
   }
   function scoreOrienting() {
     const rt = median(data.s2);
-    return clamp100(logistic(rt, 1500, 380));
+    return clamp100(logistic(rt, 1350, 340));
   }
   function scoreExecutive() {
     const cong = data.s3.filter(x => !x.incong && x.correct).map(x => x.rt);
     const inc = data.s3.filter(x => x.incong && x.correct).map(x => x.rt);
     const cost = (inc.length && cong.length) ? Math.max(0, median(inc) - median(cong)) : 250;
     const errors = data.s3.filter(x => !x.correct).length;
-    return clamp100(Math.round(logistic(cost, 115, 42) * Math.max(0.3, 1 - errors * 0.13)));
+    return clamp100(Math.round(logistic(cost, 115, 42) * Math.max(0.4, 1 - errors * 0.10)));
   }
 
   function analyze() {
@@ -1703,7 +1713,7 @@
     let type;
     if (mn >= 75) type = 'commander';
     else if ((mx + mn) / 2 < 50 && mx < 60) type = 'wanderer';
-    else if (mx - mn <= 12) type = 'balanced';
+    else if (mx - mn <= 14) type = 'balanced';
     else type = ['cheetah', 'hawkeye', 'fortress'][scores.indexOf(mx)];
     const cong = data.s3.filter(x => !x.incong && x.correct).map(x => x.rt);
     const inc = data.s3.filter(x => x.incong && x.correct).map(x => x.rt);
@@ -1965,12 +1975,52 @@
     setTimeout(() => $('copiedNote').classList.remove('show'), 2200);
   });
 
+
+  /* ---- ghost drifters: during the test, Boos float across the screen.
+     They are pure distraction — which is exactly the point. ---- */
+  let driftTimer = null;
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function spawnDrifter() {
+    const grid = SPRITES.wanderer, pal = PAL.wanderer;
+    const n = grid.length;
+    const cv = document.createElement('canvas');
+    cv.width = n; cv.height = n; cv.className = 'drifter';
+    const c = cv.getContext('2d');
+    for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+      const v = +grid[y][x]; if (!v) continue;
+      c.fillStyle = pal[v] || pal[1]; c.fillRect(x, y, 1, 1);
+    }
+    const fromLeft = Math.random() < 0.5;
+    cv.style.top = (8 + Math.random() * 58) + 'vh';
+    cv.style.left = fromLeft ? '-64px' : 'calc(100vw + 20px)';
+    document.body.appendChild(cv);
+    const dx = (fromLeft ? 1 : -1) * (innerWidth + 180);
+    const dy = Math.random() * 140 - 70;
+    const anim = cv.animate(
+      [{ transform: 'translate(0,0)' }, { transform: `translate(${dx}px, ${dy}px)` }],
+      { duration: 8000 + Math.random() * 6000, easing: 'linear' });
+    anim.onfinish = () => cv.remove();
+    anim.oncancel = () => cv.remove();
+  }
+  function driftersOn() {
+    if (driftTimer || REDUCED) return;
+    driftTimer = setInterval(() => {
+      if (document.querySelectorAll('.drifter').length < 3 && Math.random() < 0.7) spawnDrifter();
+    }, 3000);
+  }
+  function driftersOff() {
+    clearInterval(driftTimer); driftTimer = null;
+    document.querySelectorAll('.drifter').forEach(d => d.remove());
+  }
+
   /* ================= flow ================= */
   async function run() {
     show('game');
+    driftersOn();
     await stage1();
     await stage2();
     await stage3();
+    driftersOff();
     analysis = analyze();
     await revealResults(analysis);
   }

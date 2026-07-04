@@ -42,11 +42,18 @@ published adult norms:
 
 ```
 score = 100 / (1 + exp((x - mid) / k))
-alerting:  mid = 350 ms,  k = 55     (simple RT)
-orienting: mid = 1500 ms, k = 380    (12-item T/L search)
+alerting:  mid = 330 ms,  k = 50     (simple RT)
+orienting: mid = 1350 ms, k = 340    (12-item T/L search)
 executive: mid = 115 ms,  k = 42     (conflict cost) × accuracy multiplier
 overall  = 0.3·A + 0.3·O + 0.4·E
 ```
+
+Calibration note (v0.2.1): early testers clustered into the alerting/
+orienting archetypes, so those two curves were tightened and the
+executive error penalty relaxed (×0.10 per error, floor 0.4) to even
+out the archetype distribution. Ambient "ghost drifters" now float
+across the screen during the test — a deliberate, theme-consistent
+distraction load that keeps ceiling scores honest.
 
 Because the logistic is centered on the norm median, a score of *S* reads
 approximately as "ahead of ~*S*% of the norm sample" — that is the claim the
